@@ -1,0 +1,32 @@
+/CHANGELOG/1.50/Tue May 31 23:11:27 2005//
+/COPYING/1.1.1.1/Wed Apr 16 13:41:46 2003//
+/CREDITS/1.2/Tue Mar 23 06:17:33 2004//
+/INSTALL/1.2/Wed Mar 31 10:31:09 2004//
+/Makefile/1.37/Tue May 31 15:47:19 2005//
+/README/1.7/Tue May 31 13:22:10 2005//
+/bg.c/1.14/Sun May  8 12:18:39 2005//
+/bg.h/1.5/Fri Nov 12 22:59:01 2004//
+/configurator.c/1.9/Sun May 22 00:38:52 2005//
+/configure/1.7/Sun May 22 03:05:29 2005//
+/dbg.c/1.1/Sat May  7 23:39:52 2005//
+/dbg.h/1.8/Sun May  8 12:18:39 2005//
+/ev.c/1.5/Tue May 31 23:11:27 2005//
+/ev.h/1.2/Fri Dec  3 13:51:43 2004//
+/gtkbar.c/1.6/Tue May 10 11:05:05 2005//
+/gtkbar.h/1.2/Tue May 10 11:05:05 2005//
+/gtkbgbox.c/1.7/Sun May  8 12:18:39 2005//
+/gtkbgbox.h/1.3/Wed Dec  1 20:02:25 2004//
+/icon.xpm/1.1.1.1/Wed Apr 16 13:41:46 2003//
+/plugin.h/1.12/Sat May 28 22:14:27 2005//
+/version.h/1.13/Tue May 31 23:11:27 2005//
+D/config////
+D/man////
+D/plugins////
+D/systray////
+/misc.c/1.29/Sun Nov 13 22:43:14 2005//
+/misc.h/1.15/Sun Nov 13 22:29:14 2005//
+/panel.h/1.21/Sun Nov 13 22:42:33 2005//
+/panel.c/1.47/Sun Nov 13 22:36:34 2005//
+/.cvsignore/1.4/Fri Jan  6 20:11:02 2006//
+/plugin.c/1.32/Sat Jan  7 22:57:36 2006//
+/Makefile.common/1.18/Sat Jan  7 23:09:19 2006//
