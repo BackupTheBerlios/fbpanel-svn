@@ -1,0 +1,70 @@
+
+MAKEFLAGS += -rR --no-print-directory
+
+all:
+
+# this one to prevent printing make[1]: Nothing to be done for `all'
+all: FORCE
+FORCE: 
+	@#
+
+#########################################
+# check correctness of run-time environment
+ifeq (,$(TOPDIR))
+$(error TOPDIR variable must be defined)
+endif
+
+-include $(TOPDIR)/Makefile.config
+ifeq (,$(PREFIX))
+$(error Please run $(TOPDIR)/configure first)	
+endif
+
+
+
+
+#########################################
+# compile vars and flags
+
+RM      = rm -f
+CC      = gcc
+AR      = ar
+LIBS    = $(shell pkg-config --libs glib-2.0 gmodule-2.0 gthread-2.0 gtk+-2.0 gdk-pixbuf-2.0 gdk-pixbuf-xlib-2.0) -L/usr/X11R6/lib  -lXmu
+INCS2   = $(shell pkg-config --cflags glib-2.0 gmodule-2.0 gthread-2.0 gtk+-2.0 gdk-pixbuf-2.0 gdk-pixbuf-xlib-2.0)
+INCS   := $(INCS2:-I%=-isystem %)
+
+CFLAGS = -O2
+override CFLAGS += -Wall
+
+OBJ = $(SRC:%.c=%.o)
+
+Q := @
+ifeq ($(findstring s,$(MAKEFLAGS)),)
+summary = @echo "$(1)" $(subst $(TOPDIR2),,$(CURDIR)/)$(2)
+endif
+
+
+# relative dir of src files
+ifeq (,$(TOPDIR2))
+TOPDIR2:=$(CURDIR)/
+export TOPDIR2
+endif
+
+#########################################
+# compile rules
+%.o : %.c
+	$(call summary,CC  ,$@)
+	$(Q)$(CC) $(CFLAGS) $(INCS) -c $<
+
+#########################################
+# common deps and targets
+
+.PHONY: all clean distclean install uninstall help
+
+distclean: clean
+install: all
+
+TOCLEAN = $(TARGET) *~ *.o *.so *.dep *.a
+
+clean:
+	$(call summary,RM  ,$(TOCLEAN))
+	$(Q)$(RM) $(TOCLEAN)
