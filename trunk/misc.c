@@ -312,6 +312,47 @@ get_utf8_property(Window win, Atom atom)
     return retval;
 
 }
+char **
+get_utf8_property_list(Window win, Atom atom, int *count)
+{
+    Atom type;
+    int format, i;
+    gulong nitems;
+    gulong bytes_after;
+    guchar *val;
+    int result;
+    char **retval;
+    guchar *s;
+
+    *count = 0;
+    result = XGetWindowProperty (gdk_display, win, atom, 0, G_MAXLONG, False, a_UTF8_STRING,
+          &type, &format, &nitems, &bytes_after, (guchar **)&val);  
+
+    if (result != Success)
+        return NULL;
+    DBG("nitems=%d val=%s\n", nitems, val);
+    for (i = 0; i < nitems; i++) {
+        if (!val[i])
+            (*count)++;
+    }
+    retval = g_new0 (char*, *count + 2);
+    for (i = 0, s = val; i < *count; i++, s = s +  strlen (s) + 1) {
+        retval[i] = g_strdup(s);
+    }
+    if (val[nitems-1]) {
+        result = nitems - (s - val);
+        DBG("val does not ends by 0, moving last %d bytes\n", result);
+        g_memmove(s - 1, s, result);
+        val[nitems-1] = 0;
+        DBG("s=%s\n", s -1);
+        retval[i] = g_strdup(s - 1);
+        (*count)++;
+    }
+    XFree (val);
+  
+    return retval;
+
+}
 
 void *
 get_xaproperty (Window win, Atom prop, Atom type, int *nitems)

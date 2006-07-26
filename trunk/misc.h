@@ -40,6 +40,7 @@ void Xclimsgwm(Window win, Atom type, Atom arg);
 void *get_xaproperty (Window win, Atom prop, Atom type, int *nitems);
 char *get_textproperty(Window win, Atom prop);
 void *get_utf8_property(Window win, Atom atom);
+char **get_utf8_property_list(Window win, Atom atom, int *count);
 
 void resolve_atoms();
 //Window Select_Window(Display *dpy);

@@ -143,10 +143,13 @@ panel_event_filter(GdkXEvent *xevent, GdkEvent *event, panel *p)
             DBG("A_NET_NUMBER_OF_DESKTOPS\n");
             p->desknum = get_net_number_of_desktops();
             fb_ev_trigger(fbev, EV_NUMBER_OF_DESKTOPS);
-	} else if (at == a_NET_ACTIVE_WINDOW) {
+	} else if (at == a_NET_DESKTOP_NAMES) {
+            DBG2("A_NET_DESKTOP_NAMES\n");
+            fb_ev_trigger(fbev, EV_DESKTOP_NAMES);
+        } else if (at == a_NET_ACTIVE_WINDOW) {
             DBG("A_NET_ACTIVE_WINDOW\n");
             fb_ev_trigger(fbev, EV_ACTIVE_WINDOW);
-        } else if (at == a_NET_CLIENT_LIST_STACKING) {
+        }else if (at == a_NET_CLIENT_LIST_STACKING) {
             DBG("A_NET_CLIENT_LIST_STACKING\n");
             fb_ev_trigger(fbev, EV_CLIENT_LIST_STACKING);
         } else if (at == a_XROOTPMAP_ID) {

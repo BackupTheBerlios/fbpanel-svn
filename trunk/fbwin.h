@@ -58,7 +58,7 @@ enum {
     FBWIN_GEOM,
     FBWIN_ICON,
     FBWIN_STATE,
-    LAST_SIGNAL
+    FBWIN_LAST_SIGNAL
 };
 
 GType fb_win_get_type       (void);
