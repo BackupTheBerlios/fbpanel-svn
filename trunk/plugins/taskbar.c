@@ -372,18 +372,20 @@ free_pixels (guchar *pixels, gpointer data)
 
 
 static guchar *
-argbdata_to_pixdata (guint32 *argb_data, int len)
+argbdata_to_pixdata (gulong *argb_data, int len)
 {
     guchar *p, *ret;
     int i;
 
     ENTER;
     ret = p = g_new (guchar, len * 4);
+    if (!ret)
+        RET(NULL);
     /* One could speed this up a lot. */
     i = 0;
     while (i < len) {
-        guint argb;
-        guint rgba;
+        guint32 argb;
+        guint32 rgba;
       
         argb = argb_data[i];
         rgba = (argb << 8) | (argb >> 24);
@@ -406,23 +408,23 @@ argbdata_to_pixdata (guint32 *argb_data, int len)
 static GdkPixbuf *
 get_netwm_icon(Window tkwin, int iw, int ih)
 {
-    guint32 *data;
+    gulong *data;
     GdkPixbuf *ret = NULL;
     int n;
 
     ENTER;
     data = get_xaproperty(tkwin, a_NET_WM_ICON, XA_CARDINAL, &n);
-    DBG("icon size = %d data = %p w=%d h=%d\n", n, data, data[0], data[1]);
+    DBG("icon size = %d data = %p w=%ld h=%ld\n", n, data, data[0], data[1]);
 
-    if (1) {
-        guint32 *tmp;
+    if (0) {
+        gulong *tmp;
         int len;
         
-        len = n/sizeof(guint32);
+        len = n/sizeof(gulong);
         tmp = data;
         while (len > 2) {
             int size = tmp[0] * tmp[1];
-            DBG2("sub-icon: %dx%d %d bytes\n", tmp[0], tmp[1], size * 4);
+            DBG("sub-icon: %dx%d %d bytes\n", tmp[0], tmp[1], size * 4);
             len -= size + 2;
             tmp += size;
         }
@@ -437,7 +439,8 @@ get_netwm_icon(Window tkwin, int iw, int ih)
             w = data[0];
             h = data[1];
             p = argbdata_to_pixdata(data + 2, w * h);
-
+            if (!p)
+                RET(NULL);
             src = gdk_pixbuf_new_from_data (p, GDK_COLORSPACE_RGB, TRUE,
                   8, w, h, w * 4, free_pixels, NULL);
             if (src == NULL)
