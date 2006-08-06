@@ -30,7 +30,7 @@
 
 typedef struct wmpix_t {
     struct wmpix_t *next;
-    guint32 *data;
+    gulong *data;
     int size;
     XClassHint ch;
 } wmpix_t;
@@ -103,7 +103,7 @@ static wmpix_t *
 get_dicon_maybe(icons *ics, task *tk)
 {
     XWMHints *hints;
-    guint32 *data;
+    gulong *data;
     int n;
 
     ENTER;
@@ -115,8 +115,10 @@ get_dicon_maybe(icons *ics, task *tk)
     
     hints = (XWMHints *) get_xaproperty (tk->win, XA_WM_HINTS, XA_WM_HINTS, 0);
     if (hints) {
-        if ((hints->flags & IconPixmapHint) || (hints->flags & IconMaskHint))
+        if ((hints->flags & IconPixmapHint) || (hints->flags & IconMaskHint)) {
+            XFree (hints);
             RET(NULL);
+        }
         XFree (hints);
     }
     RET(ics->dicon);
@@ -144,12 +146,12 @@ get_user_icon(icons *ics, task *tk)
 
 
 
-guint32 *
+gulong *
 pixbuf2argb (GdkPixbuf *pixbuf, int *size)
 {
-    guint32 *data;
+    gulong *data;
     guchar *pixels;
-    guint32 *p;
+    gulong *p;
     gint width, height, stride;
     gint x, y;
     gint n_channels;
@@ -158,18 +160,11 @@ pixbuf2argb (GdkPixbuf *pixbuf, int *size)
     *size = 0;
     width = gdk_pixbuf_get_width (pixbuf);
     height = gdk_pixbuf_get_height (pixbuf);
-      
-    *size += 2 + width * height;
-
-    data = g_malloc (*size * sizeof (guint32));
-
-    p = data;
-      
-    width = gdk_pixbuf_get_width (pixbuf);
-    height = gdk_pixbuf_get_height (pixbuf);
     stride = gdk_pixbuf_get_rowstride (pixbuf);
     n_channels = gdk_pixbuf_get_n_channels (pixbuf);
-    
+      
+    *size += 2 + width * height;
+    p = data = g_malloc (*size * sizeof (gulong));
     *p++ = width;
     *p++ = height;
     
@@ -331,7 +326,7 @@ read_application(plugin *p)
     line s;
     gchar *fname, *appname, *classname;
     wmpix_t *wp = NULL;
-    guint32 *data;
+    gulong *data;
     int size;
     
     ENTER;
@@ -390,7 +385,7 @@ read_dicon(icons *ics, gchar *name)
     gchar *fname;
     GdkPixbuf *gp;
     int size;
-    guint32 *data;
+    gulong *data;
     
     ENTER;
     fname = expand_tilda(name);

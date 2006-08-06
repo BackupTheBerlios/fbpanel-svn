@@ -71,7 +71,8 @@ tar:
 		exit 1;\
 	else\
 		ln -s $(CWD) fbpanel-$(VER);\
-		tar --exclude CVS --exclude .cvsignore -hzcvf fbpanel-$(VER).tgz fbpanel-$(VER);\
+		tar --exclude .svn --exclude CVS --exclude .cvsignore \
+			-hzcvf fbpanel-$(VER).tgz fbpanel-$(VER);\
 		rm -f fbpanel-$(VER);\
 	fi;
 	@ls -al ../fbpanel-$(VER).tgz;

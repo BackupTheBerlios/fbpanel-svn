@@ -328,9 +328,9 @@ get_utf8_property_list(Window win, Atom atom, int *count)
     result = XGetWindowProperty (gdk_display, win, atom, 0, G_MAXLONG, False, a_UTF8_STRING,
           &type, &format, &nitems, &bytes_after, (guchar **)&val);  
 
-    if (result != Success)
+    if (result != Success || !val || !nitems)
         return NULL;
-    DBG("nitems=%d val=%s\n", nitems, val);
+    DBG("res=%d(%d) nitems=%d val=%s\n", result, Success, nitems, val);
     for (i = 0; i < nitems; i++) {
         if (!val[i])
             (*count)++;
