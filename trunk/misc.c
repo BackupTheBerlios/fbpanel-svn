@@ -38,6 +38,7 @@ Atom a_NET_CURRENT_DESKTOP;
 Atom a_NET_DESKTOP_NAMES;
 Atom a_NET_ACTIVE_WINDOW;
 Atom a_NET_CLOSE_WINDOW;
+Atom a_NET_SUPPORTED;
 Atom a_NET_WM_DESKTOP;
 Atom a_NET_WM_STATE;
 Atom a_NET_WM_STATE_SKIP_TASKBAR;
@@ -222,6 +223,7 @@ void resolve_atoms()
     a_NET_CURRENT_DESKTOP        = XInternAtom(GDK_DISPLAY(), "_NET_CURRENT_DESKTOP", False);
     a_NET_DESKTOP_NAMES          = XInternAtom(GDK_DISPLAY(), "_NET_DESKTOP_NAMES", False);
     a_NET_ACTIVE_WINDOW          = XInternAtom(GDK_DISPLAY(), "_NET_ACTIVE_WINDOW", False);
+    a_NET_SUPPORTED              = XInternAtom(GDK_DISPLAY(), "_NET_SUPPORTED", False);
     a_NET_WM_DESKTOP             = XInternAtom(GDK_DISPLAY(), "_NET_WM_DESKTOP", False);
     a_NET_WM_STATE               = XInternAtom(GDK_DISPLAY(), "_NET_WM_STATE", False);
     a_NET_WM_STATE_SKIP_TASKBAR  = XInternAtom(GDK_DISPLAY(), "_NET_WM_STATE_SKIP_TASKBAR", False);

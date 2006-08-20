@@ -113,6 +113,7 @@ extern Atom a_NET_CURRENT_DESKTOP;
 extern Atom a_NET_DESKTOP_NAMES;
 extern Atom a_NET_ACTIVE_WINDOW;
 extern Atom a_NET_CLOSE_WINDOW;
+extern Atom a_NET_SUPPORTED;
 extern Atom a_NET_WM_STATE;
 extern Atom a_NET_WM_STATE_SKIP_TASKBAR;
 extern Atom a_NET_WM_STATE_SKIP_PAGER;

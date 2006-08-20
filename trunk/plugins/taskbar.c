@@ -96,6 +96,10 @@ static gchar *taskbar_rc = "style 'taskbar-style'\n"
 "}\n"
 "widget '*.taskbar.*' style 'taskbar-style'";
 
+static gboolean use_net_active=FALSE;
+
+
+
 #define TASK_WIDTH_MAX   200
 #define TASK_PADDING     4
 static void tk_display(taskbar *tb, task *tk);
@@ -618,15 +622,19 @@ tk_callback_button_release_event(GtkWidget *widget, GdkEventButton *event, task 
     DBG("win=%x\n", tk->win);
     if (event->button == 1) {
         if (tk->iconified)    {
-            GdkWindow *gdkwindow;
-
-            gdkwindow = gdk_xid_table_lookup (tk->win);
-            if (gdkwindow)
-                gdk_window_show (gdkwindow);
-            else 
-                XMapRaised (GDK_DISPLAY(), tk->win);                           
-            XSync (GDK_DISPLAY(), False);
-            DBG("XMapRaised  %x\n", tk->win);
+	    if(use_net_active) {
+		Xclimsg(tk->win, a_NET_ACTIVE_WINDOW, 2, event->time, 0, 0, 0);
+	    } else {
+		GdkWindow *gdkwindow;
+		
+		gdkwindow = gdk_xid_table_lookup (tk->win);
+		if (gdkwindow)
+		    gdk_window_show (gdkwindow);
+		else 
+		    XMapRaised (GDK_DISPLAY(), tk->win);                           
+		XSync (GDK_DISPLAY(), False);
+		DBG("XMapRaised  %x\n", tk->win);
+	    }
         } else {
             DBG("tb->ptk = %x\n", (tk->tb->ptk) ? tk->tb->ptk->win : 0);
             if (tk->focused || tk == tk->tb->ptk) {
@@ -639,10 +647,13 @@ tk_callback_button_release_event(GtkWidget *widget, GdkEventButton *event, task 
                     Xclimsg(GDK_ROOT_WINDOW(), a_NET_CURRENT_DESKTOP, tk->desktop, 0, 0, 0, 0);
                     XSync (gdk_display, False);
                 }
-                XRaiseWindow (GDK_DISPLAY(), tk->win);
-                XSetInputFocus (GDK_DISPLAY(), tk->win, RevertToNone, CurrentTime);
-                DBG("XRaiseWindow %x\n", tk->win);
-
+		if(use_net_active) {
+		    Xclimsg(tk->win, a_NET_ACTIVE_WINDOW, 2, event->time, 0, 0, 0);
+		} else {
+		    XRaiseWindow (GDK_DISPLAY(), tk->win);
+		    XSetInputFocus (GDK_DISPLAY(), tk->win, RevertToNone, CurrentTime);
+		    DBG("XRaiseWindow %x\n", tk->win);
+		}
             }
         }
     } else if (event->button == 2) {
@@ -1122,6 +1133,24 @@ taskbar_build_gui(plugin *p)
     RET();
 }
 
+void net_active_detect()
+{
+    int nitens;
+    Atom *data;
+
+    data = get_xaproperty(GDK_ROOT_WINDOW(), a_NET_SUPPORTED, XA_ATOM, &nitens);
+    if (!data)
+	return;
+    
+    while (nitens > 0) 
+	if(data[--nitens]==a_NET_ACTIVE_WINDOW) {
+	    use_net_active = TRUE;
+            break;
+        }
+    
+    XFree(data);
+}
+
 static int
 taskbar_constructor(plugin *p)
 {
@@ -1134,6 +1163,8 @@ taskbar_constructor(plugin *p)
     gtk_widget_set_name(p->pwid, "taskbar");
     gtk_rc_parse_string(taskbar_rc);
     get_button_spacing(&req, GTK_CONTAINER(p->pwid), "");
+   
+    net_active_detect();
     
     tb = g_new0(taskbar, 1);
     tb->plug = p;

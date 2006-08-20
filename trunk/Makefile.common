@@ -94,7 +94,9 @@ ifeq (1,$(DEVEL))
 override CFLAGS += -g
 endif
 override CFLAGS += -Wall
-#override CFLAGS += -DG_DISABLE_DEPRECATED -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED
+
+LDFLAGS=-Wl,-O1
+
 
 OBJ = $(SRC:%.c=%.o)
 DEP = $(SRC:%.c=%.dep)
