@@ -37,9 +37,12 @@ override CFLAGS += -Wall
 
 OBJ = $(SRC:%.c=%.o)
 
+ifneq (1,$(V))
 Q := @
-ifeq ($(findstring s,$(MAKEFLAGS)),)
 summary = @echo "$(1)" $(subst $(TOPDIR2),,$(CURDIR)/)$(2)
+else
+Q := 
+summary = 
 endif
 
 

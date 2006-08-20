@@ -16,11 +16,12 @@ $(SUBDIRS):
 	$(Q)$(MAKE) -C $@ $(MAKECMDGOALS)
 
 
-TARGET := fbpanel
+
 
 SRC = panel.c 
 EXTRAOBJ = widgets/lib.a
 
+TARGET := fbpanel
 all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(call summary,LD  ,$@)
