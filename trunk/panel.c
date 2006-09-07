@@ -144,7 +144,7 @@ panel_event_filter(GdkXEvent *xevent, GdkEvent *event, panel *p)
             p->desknum = get_net_number_of_desktops();
             fb_ev_trigger(fbev, EV_NUMBER_OF_DESKTOPS);
 	} else if (at == a_NET_DESKTOP_NAMES) {
-            DBG2("A_NET_DESKTOP_NAMES\n");
+            DBG("A_NET_DESKTOP_NAMES\n");
             fb_ev_trigger(fbev, EV_DESKTOP_NAMES);
         } else if (at == a_NET_ACTIVE_WINDOW) {
             DBG("A_NET_ACTIVE_WINDOW\n");
