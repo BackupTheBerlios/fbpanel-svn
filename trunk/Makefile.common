@@ -4,7 +4,7 @@
 #$(warning "make=$(MAKE) makeflags=$(MAKEFLAGS) makecmdgoals=$(MAKECMDGOALS)")
 
 # drop all internal rules. This speeds up and simplifies things a lot
-MAKEFLAGS += -rR
+#MAKEFLAGS += -rR
 
 # decide whether we have to build somthing
 not-build-goals := clean distclean tar help
@@ -66,6 +66,9 @@ endif
 all: FORCE
 FORCE: 
 	@#
+
+
+
 Q := @
 ifeq ($(findstring s,$(MAKEFLAGS)),)
 summary = @echo "$(1)" $(subst $(TOPDIR2),,$(CURDIR)/)$(2)
@@ -96,6 +99,7 @@ endif
 
 LDFLAGS ?=-Wl,-O1
 
+#$(warning  echo cc=$(CC) ld=$(LD) cflags=$(CFLAGS) ldflags=$(LDFLAGS))
 
 OBJ = $(SRC:%.c=%.o)
 DEP = $(SRC:%.c=%.dep)
@@ -109,7 +113,7 @@ DEP = $(SRC:%.c=%.dep)
 
 %.dep : %.c
 	$(call summary,DEP ,$@)
-	$(Q)$(CC) $(CFLAGS) $(INCS) -MM $<  -o $@
+	$(Q)$(CC) $(CPPFLAGS) $(INCS) -MM $< | sed 's/\($*\).o[ :]*/\1.o $@ :/' > $@
 
 
 #########################################

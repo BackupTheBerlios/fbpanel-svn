@@ -1,6 +1,8 @@
 4.5
 Fixed bugs
 * Makefile.common overwrite/ignore CFLAGS and LDFLAGS env. variables
+* rebuild dependancy Makefiles (*.dep) if their prerequisits were changed
+
 
 New features
 * porting plugins/taskbar to 64 bit
