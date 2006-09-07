@@ -1,3 +1,14 @@
+4.5
+Fixed bugs
+* Makefile.common overwrite/ignore CFLAGS and LDFLAGS env. variables
+
+New features
+* porting plugins/taskbar to 64 bit
+* porting plugins/icons to 64 bit
+* adding LDFLAGS=-Wl,-O1 to Makefile
+* adding deskno2 plugin; it shows current desktop name and allow to scroll over available desktops
+* applying patch [ 1062173 ] NET_ACTIVE_WINDOW support
+
 4.4
 New Feature
 * 64-bit awarenes

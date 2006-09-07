@@ -83,19 +83,18 @@ endif
 # compile flags
 
 RM      = rm -f
-CC      = gcc
+CC      ?= gcc
 AR      = ar
 LIBS    = $(shell pkg-config --libs glib-2.0 gmodule-2.0 gthread-2.0 gtk+-2.0 gdk-pixbuf-2.0 gdk-pixbuf-xlib-2.0) -L/usr/X11R6/lib  -lXmu
 INCS2   = $(shell pkg-config --cflags glib-2.0 gmodule-2.0 gthread-2.0 gtk+-2.0 gdk-pixbuf-2.0 gdk-pixbuf-xlib-2.0)
 INCS   := $(INCS2:-I%=-isystem %)
 
-CFLAGS = -O2
+CFLAGS ?= -O2 -Wall
 ifeq (1,$(DEVEL))
 override CFLAGS += -g
 endif
-override CFLAGS += -Wall
 
-LDFLAGS=-Wl,-O1
+LDFLAGS ?=-Wl,-O1
 
 
 OBJ = $(SRC:%.c=%.o)
