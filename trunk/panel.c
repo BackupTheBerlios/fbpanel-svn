@@ -186,7 +186,7 @@ panel_destroy_event(GtkWidget * widget, GdkEvent * event, gpointer data)
 {
     //panel *p = (panel *) data;
 
-    ENTER2;  
+    ENTER;  
     //if (!p->self_destroy)
     gtk_main_quit();
     RET(FALSE);
