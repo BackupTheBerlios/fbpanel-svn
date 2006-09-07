@@ -852,7 +852,7 @@ fb_button_enter (GtkImage *widget, GdkEventCrossing *event)
 {
     GdkPixbuf *dark, *light;
     int i;
-    guint hicolor;
+    gulong hicolor;
     guchar *src, *up, extra[3];
  
     ENTER;
@@ -861,7 +861,7 @@ fb_button_enter (GtkImage *widget, GdkEventCrossing *event)
     light = g_object_get_data(G_OBJECT(widget), "light");
     dark = gtk_image_get_pixbuf(widget);
     if (!light) {
-        hicolor = (gint) g_object_get_data(G_OBJECT(widget), "hicolor");
+        hicolor = (gulong) g_object_get_data(G_OBJECT(widget), "hicolor");
         light = gdk_pixbuf_add_alpha(dark, FALSE, 0, 0, 0);
         if (!light)
             RET(TRUE);
@@ -904,7 +904,7 @@ fb_button_leave (GtkImage *widget, GdkEventCrossing *event, gpointer user_data)
 
 
 GtkWidget *
-fb_button_new_from_file(gchar *fname, int width, int height, guint hicolor, gboolean keep_ratio)
+fb_button_new_from_file(gchar *fname, int width, int height, gulong hicolor, gboolean keep_ratio)
 {
     GtkWidget *b, *image;
     
@@ -930,7 +930,7 @@ fb_button_new_from_file(gchar *fname, int width, int height, guint hicolor, gboo
 
 GtkWidget *
 fb_button_new_from_file_with_label(gchar *fname, int width, int height,
-      guint hicolor, gboolean keep_ratio, gchar *name)
+      gulong hicolor, gboolean keep_ratio, gchar *name)
 {
     GtkWidget *b, *image, *box, *label;
     

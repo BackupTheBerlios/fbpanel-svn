@@ -59,8 +59,8 @@ GtkWidget *gtk_image_new_from_file_scaled(const gchar *file, gint width, gint he
                                           gboolean keep_ratio);
 void get_button_spacing(GtkRequisition *req, GtkContainer *parent, gchar *name);
 guint32 gcolor2rgb24(GdkColor *color);
-GtkWidget *fb_button_new_from_file(gchar *fname, int width, int height, guint hicolor,
+GtkWidget *fb_button_new_from_file(gchar *fname, int width, int height, gulong hicolor,
       gboolean keep_ratio);
 GtkWidget *fb_button_new_from_file_with_label(gchar *fname, int width, int height,
-      guint hicolor, gboolean keep_ratio, gchar *label);
+      gulong hicolor, gboolean keep_ratio, gchar *label);
 #endif
