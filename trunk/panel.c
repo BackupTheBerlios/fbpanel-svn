@@ -610,7 +610,7 @@ panel_start(panel *p, FILE *fp)
     p->transparent = 0;
     p->alpha = 127;
     p->tintcolor = 0xFFFFFFFF;
-    p->spacing = 1;
+    p->spacing = 0;
     fbev = fb_ev_new();
     if ((get_line(fp, &s) != LINE_BLOCK_START) || g_ascii_strcasecmp(s.t[0], "Global")) {
         ERR( "fbpanel: config file must start from Global section\n");

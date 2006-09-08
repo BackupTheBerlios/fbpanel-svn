@@ -3,13 +3,15 @@ Fixed bugs
 * Makefile.common overwrite/ignore CFLAGS and LDFLAGS env. variables
 * rebuild dependancy Makefiles (*.dep) if their prerequisits were changed
 
-
 New features
 * porting plugins/taskbar to 64 bit
 * porting plugins/icons to 64 bit
 * adding LDFLAGS=-Wl,-O1 to Makefile
 * adding deskno2 plugin; it shows current desktop name and allow to scroll over available desktops
 * applying patch [ 1062173 ] NET_ACTIVE_WINDOW support
+* hiding tray when there are no tray icons
+* remove extra space around tray
+
 
 4.4
 New Feature

@@ -26,7 +26,7 @@ typedef struct {
     GtkWidget *box;
     /////
     EggTrayManager *tray_manager;
-    
+    int icon_num;
 } tray;
 
 //static void run_gtktray(tray *tr);
@@ -34,18 +34,27 @@ typedef struct {
 
 
 static void
-tray_added (EggTrayManager *manager, GtkWidget *icon, void *data)
+tray_added (EggTrayManager *manager, GtkWidget *icon, tray *tr)
 {
-    GtkWidget *box = (GtkWidget *)data;
-
-    gtk_box_pack_end (GTK_BOX (box), icon, FALSE, FALSE, 1);
+    gtk_box_pack_end (GTK_BOX (tr->box), icon, FALSE, FALSE, 0);
     gtk_widget_show (icon);
+    if (!tr->icon_num) {
+        DBG("first icon\n");
+        gtk_widget_show_all(tr->box);
+    }
+    tr->icon_num++;
+    DBG("add icon\n");
 }
 
 static void
-tray_removed (EggTrayManager *manager, GtkWidget *icon, void *data)
+tray_removed (EggTrayManager *manager, GtkWidget *icon, tray *tr)
 {
-
+    tr->icon_num--;
+    DBG("del icon\n");
+    if (!tr->icon_num) {
+        gtk_widget_hide(tr->box);
+        DBG("last icon\n");
+    }
 }
 
 static void
@@ -56,7 +65,6 @@ message_sent (EggTrayManager *manager, GtkWidget *icon, const char *text, glong 
     int x, y;
     
     gdk_window_get_origin (icon->window, &x, &y);
-  
     fixed_tip_show (0, x, y, FALSE, gdk_screen_height () - 50, text);
 }
 
@@ -92,7 +100,7 @@ tray_constructor(plugin *p)
     line s;
     tray *tr;
     GdkScreen *screen;
-    GtkWidget *frame;
+    //GtkWidget *frame;
     
     ENTER;
     s.len = 256;
@@ -106,16 +114,17 @@ tray_constructor(plugin *p)
     g_return_val_if_fail(tr != NULL, 0);
     p->priv = tr;
     tr->plug = p;
-
+    tr->icon_num = 0;
+#if 0
     frame = gtk_frame_new(NULL);
-    //gtk_container_set_border_width(GTK_CONTAINER(frame), 0);
-    gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
-    gtk_container_add(GTK_CONTAINER(p->pwid), frame);    
-    tr->box = p->panel->my_box_new(FALSE, 2);
-    gtk_container_add(GTK_CONTAINER(frame), tr->box);
-    
-    gtk_bgbox_set_background(p->pwid, BG_STYLE, 0, 0);
-    gtk_container_set_border_width(GTK_CONTAINER(p->pwid), 1);
+    gtk_container_set_border_width(GTK_CONTAINER(frame), 0);
+    gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
+#endif
+    tr->box = p->panel->my_box_new(FALSE, 0);
+    //gtk_container_add(GTK_CONTAINER(frame), tr->box);
+    gtk_container_add(GTK_CONTAINER(p->pwid), tr->box);        
+    //gtk_bgbox_set_background(p->pwid, BG_STYLE, 0, 0);
+    gtk_container_set_border_width(GTK_CONTAINER(p->pwid), 0);
     screen = gtk_widget_get_screen (GTK_WIDGET (p->panel->topgwin));
     
     if (egg_tray_manager_check_running(screen)) {
@@ -127,16 +136,12 @@ tray_constructor(plugin *p)
     if (!egg_tray_manager_manage_screen (tr->tray_manager, screen))
         g_printerr ("tray: System tray didn't get the system tray manager selection\n");
     
-    g_signal_connect (tr->tray_manager, "tray_icon_added",
-          G_CALLBACK (tray_added), tr->box);
-    g_signal_connect (tr->tray_manager, "tray_icon_removed",
-          G_CALLBACK (tray_removed), tr->box);
-    g_signal_connect (tr->tray_manager, "message_sent",
-          G_CALLBACK (message_sent), tr->box);
-    g_signal_connect (tr->tray_manager, "message_cancelled",
-          G_CALLBACK (message_cancelled), tr->box);
+    g_signal_connect (tr->tray_manager, "tray_icon_added", G_CALLBACK (tray_added), tr);
+    g_signal_connect (tr->tray_manager, "tray_icon_removed", G_CALLBACK (tray_removed), tr);
+    g_signal_connect (tr->tray_manager, "message_sent", G_CALLBACK (message_sent), tr);
+    g_signal_connect (tr->tray_manager, "message_cancelled", G_CALLBACK (message_cancelled), tr);
     
-    gtk_widget_show_all(frame);
+    gtk_widget_show_all(tr->box);
     RET(1);
 
 }
