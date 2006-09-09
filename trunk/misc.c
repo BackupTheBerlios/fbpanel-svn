@@ -296,16 +296,16 @@ get_utf8_property(Window win, Atom atom)
     int format;
     gulong nitems;
     gulong bytes_after;
-    guchar *val;
+    gchar *val, *retval;
     int result;
-    char *retval;
-  
+    guchar *tmp;
+    
     type = None;
     val = NULL;
     retval = NULL;
     result = XGetWindowProperty (gdk_display, win, atom, 0, G_MAXLONG, False, a_UTF8_STRING,
-          &type, &format, &nitems, &bytes_after, (guchar **)&val);  
-
+          &type, &format, &nitems, &bytes_after, &tmp);  
+    val = (gchar *) tmp;
     if (result == Success && val != NULL && type == a_UTF8_STRING && format == 8 &&  nitems != 0) 
         retval = g_strndup (val, nitems);
     if (val)
@@ -321,15 +321,14 @@ get_utf8_property_list(Window win, Atom atom, int *count)
     int format, i;
     gulong nitems;
     gulong bytes_after;
-    guchar *val;
+    gchar *val, *s, **retval;
     int result;
-    char **retval;
-    guchar *s;
+    guchar *tmp;
 
     *count = 0;
     result = XGetWindowProperty (gdk_display, win, atom, 0, G_MAXLONG, False, a_UTF8_STRING,
-          &type, &format, &nitems, &bytes_after, (guchar **)&val);  
-
+          &type, &format, &nitems, &bytes_after, &tmp);  
+    val = (gchar *) tmp;
     if (result != Success || !val || !nitems)
         return NULL;
     DBG("res=%d(%d) nitems=%d val=%s\n", result, Success, nitems, val);

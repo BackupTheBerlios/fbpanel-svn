@@ -44,7 +44,8 @@ extern panel *p;
 /* managed window: all related info that wm holds about its managed windows */
 typedef struct task {
     Window win;
-    int x, y, w, h;
+    int x, y;
+    guint w, h;
     gint refcount;
     guint stacking;
     guint desktop;
@@ -135,7 +136,8 @@ static void
 task_get_sizepos(task *t)
 {
     Window root, junkwin;
-    int dummy, rx, ry;
+    int rx, ry;
+    guint dummy;
     XWindowAttributes win_attributes;
     
     ENTER;

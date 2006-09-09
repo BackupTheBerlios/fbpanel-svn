@@ -463,7 +463,8 @@ get_wm_icon(Window tkwin, int iw, int ih)
     XWMHints *hints;
     Pixmap xpixmap = None, xmask = None;
     Window win;
-    unsigned int w, h, d;
+    unsigned int w, h;
+    int sd;
     GdkPixbuf *ret, *masked, *pixmap, *mask = NULL;
  
     ENTER;
@@ -480,7 +481,8 @@ get_wm_icon(Window tkwin, int iw, int ih)
     if (xpixmap == None)
         RET(NULL);
     
-    if (!XGetGeometry (GDK_DISPLAY(), xpixmap, &win, &d, &d, &w, &h, &d, &d)) {
+    if (!XGetGeometry (GDK_DISPLAY(), xpixmap, &win, &sd, &sd, &w, &h,
+              (guint *)&sd, (guint *)&sd)) {
         LOG(LOG_WARN,"XGetGeometry failed for %x pixmap\n", (unsigned int)xpixmap);
         RET(NULL);
     }
@@ -489,7 +491,7 @@ get_wm_icon(Window tkwin, int iw, int ih)
     if (!pixmap)
         RET(NULL);
     if (xmask != None && XGetGeometry (GDK_DISPLAY(), xmask,
-              &win, &d, &d, &w, &h, &d, &d)) {
+              &win, &sd, &sd, &w, &h, (guint *)&sd, (guint *)&sd)) {
         mask = _wnck_gdk_pixbuf_get_from_pixmap (NULL, xmask, 0, 0, 0, 0, w, h);
         
         if (mask) {
