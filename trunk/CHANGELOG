@@ -2,6 +2,7 @@
 Fixed bugs
 * Makefile.common overwrite/ignore CFLAGS and LDFLAGS env. variables
 * rebuild dependancy Makefiles (*.dep) if their prerequisits were changed
+* fixing gcc-4.1 compile warnings about signess
 
 New features
 * porting plugins/taskbar to 64 bit
@@ -11,7 +12,7 @@ New features
 * applying patch [ 1062173 ] NET_ACTIVE_WINDOW support
 * hiding tray when there are no tray icons
 * remove extra space around tray
-
+* using new icons from etiquette theme. droping old ones
 
 4.4
 New Feature
