@@ -6,6 +6,9 @@ include $(TOPDIR)/Makefile.common
 
 # Part 1
 # recursive make
+RGOALS := $(filter-out tar, $(MAKECMDGOALS))
+#$(warning recursive goals $(RGOALS))
+
 .PHONY: subdirs
 all clean distclean install uninstall: subdirs
 
@@ -13,7 +16,7 @@ SUBDIRS = config man systray plugins
 .PHONY: $(SUBDIRS)
 subdirs: $(SUBDIRS)
 $(SUBDIRS):
-	$(Q)$(MAKE) -C $@ $(MAKECMDGOALS)
+	$(Q)$(MAKE) -C $@ $(RGOALS)
 
 
 
@@ -56,11 +59,11 @@ uninstall:
 
 .PHONY: tar
 
-
+ifeq ($(filter tar, $(MAKECMDGOALS)),tar)
 CWD=$(shell pwd)
 VER=$(shell grep -e "\#define[[:space:]]\+VERSION[[:space:]]\+" version.h | \
 	sed -e 's/^[^\"]\+\"//' -e 's/\".*$$//' )
-
+endif
 
 tar: 
 	$(MAKE) distclean
