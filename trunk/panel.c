@@ -50,7 +50,7 @@ panel_del_wm_strut(panel *p)
 static void
 panel_set_wm_strut(panel *p)
 {
-    guint32 data[12] = { 0 };
+    gulong data[12] = { 0 };
     int i = 4;
 
     ENTER;
