@@ -4,6 +4,7 @@ Fixed bugs
 * rebuild dependancy Makefiles (*.dep) if their prerequisits were changed
 * fixing gcc-4.1 compile warnings about signess
 * removing tar from make's recursive goals
+* fixing NET_WM_STRUT code to work on 64 bit platforms
 
 New features
 * porting plugins/taskbar to 64 bit
