@@ -20,7 +20,7 @@ install:
 	install -d  $(PREFIX)/share/fbpanel
 	install -m 644 $(TARGET) $(PREFIX)/share/fbpanel
 	install -d  $(PREFIX)/share/fbpanel/images
-	install -m 644 images/*.png $(PREFIX)/share/fbpanel/images
+	install -m 644 images/*.svg $(PREFIX)/share/fbpanel/images
 	install -m 644 images/*.xpm $(PREFIX)/share/fbpanel/images
 
 uninstall:
