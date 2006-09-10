@@ -19,6 +19,11 @@
 #include "icon.xpm"
 #include "gtkbar.h"
 
+/*
+ * 2006.09.10 modified by Hong Jen Yee (PCMan) pcman.tw (AT) gmail.com
+ * Following features are added:
+ * 1. Add XUrgencyHint support. (Flashing task bar buttons, can be disabled)
+ */
 
 //#define DEBUG
 #include "dbg.h"
@@ -41,9 +46,13 @@ typedef struct _task{
     int desktop;
     net_wm_state nws;
     net_wm_window_type nwwt;
+    guint flash_timeout;
     unsigned int focused:1;
     unsigned int iconified:1;
+    unsigned int urgency:1;
     unsigned int using_netwm_icon:1;
+    unsigned int flash:1;
+    unsigned int flash_state:1;
 } task;
 
 
@@ -82,6 +91,7 @@ typedef struct _taskbar{
     unsigned int tooltips : 1;
     unsigned int icons_only : 1;
     unsigned int use_mouse_wheel : 1;
+    unsigned int use_urgency_hint : 1;
 } taskbar;
 
 
@@ -107,6 +117,9 @@ static void tb_propertynotify(taskbar *tb, XEvent *ev);
 static GdkFilterReturn tb_event_filter( XEvent *, GdkEvent *, taskbar *);
 static void taskbar_destructor(plugin *p);
 
+static void tk_flash_window( task *tk );
+static void tk_unflash_window( task *tk );
+static void tk_raise_window( task *tk, guint32 time );
 
 #define TASK_VISIBLE(tb, tk) \
  ((tk)->desktop == (tb)->cur_desk || (tk)->desktop == -1 /* 0xFFFFFFFF */ )
@@ -542,7 +555,53 @@ tk_update_icon (taskbar *tb, task *tk, Atom a)
     RET();
 }
 
+static gboolean on_flash_win( task *tk )
+{
+    tk->flash_state = ! tk->flash_state;
+    gtk_widget_set_state( tk->button, tk->flash_state ? GTK_STATE_SELECTED : tk->tb->normal_state );
+    gtk_widget_queue_draw( tk->button );
+    return TRUE;
+}
 
+static void
+tk_flash_window( task *tk )
+{
+    gint interval;
+    tk->flash = 1;
+    tk->flash_state = ! tk->flash_state;
+    if( tk->flash_timeout )
+        return;
+    g_object_get( gtk_widget_get_settings(tk->button),
+                  "gtk-cursor-blink-time", &interval, NULL );
+	tk->flash_timeout = g_timeout_add( interval, (GSourceFunc)on_flash_win, tk );
+}
+
+static void
+tk_unflash_window( task *tk )
+{
+    tk->flash = tk->flash_state = 0;
+    if( tk->flash_timeout ) {
+        g_source_remove( tk->flash_timeout );
+        tk->flash_timeout = 0;
+    }
+}
+
+static void
+tk_raise_window( task *tk, guint32 time )
+{
+    if (tk->desktop != -1 && tk->desktop != tk->tb->cur_desk){
+        Xclimsg(GDK_ROOT_WINDOW(), a_NET_CURRENT_DESKTOP, tk->desktop, 0, 0, 0, 0);
+        XSync (gdk_display, False);
+    }
+    if(use_net_active) {
+        Xclimsg(tk->win, a_NET_ACTIVE_WINDOW, 2, time, 0, 0, 0);
+    }
+    else {
+        XRaiseWindow (GDK_DISPLAY(), tk->win);
+        XSetInputFocus (GDK_DISPLAY(), tk->win, RevertToNone, CurrentTime);
+    }
+    DBG("XRaiseWindow %x\n", tk->win);
+}
 
 static void
 tk_callback_leave( GtkWidget *widget, task *tk)
@@ -573,13 +632,20 @@ tk_callback_expose(GtkWidget *widget, GdkEventExpose *event, task *tk)
         gtk_widget_set_state(widget, state);
         gtk_widget_queue_draw(widget);
     } else {
-
-        gtk_paint_box (widget->style, widget->window,
-              state, 
-              (tk->focused) ? GTK_SHADOW_IN : GTK_SHADOW_OUT,
-              &event->area, widget, "button",
-              widget->allocation.x, widget->allocation.y,
-              widget->allocation.width, widget->allocation.height);
+        if( ! tk->flash || 0 == tk->flash_state ) {
+            gtk_paint_box (widget->style, widget->window,
+                  state, 
+                  (tk->focused) ? GTK_SHADOW_IN : GTK_SHADOW_OUT,
+                  &event->area, widget, "button",
+                  widget->allocation.x, widget->allocation.y,
+                  widget->allocation.width, widget->allocation.height);
+        } else {
+            gdk_draw_rectangle( widget->window, 
+                                widget->style->bg_gc[GTK_STATE_SELECTED],
+                                TRUE, 0, 0,
+                                widget->allocation.width,
+                                widget->allocation.height );
+        }
         /*
         _gtk_button_paint(GTK_BUTTON(widget), &event->area, state,
               (tk->focused) ? GTK_SHADOW_IN : GTK_SHADOW_OUT,
@@ -644,18 +710,7 @@ tk_callback_button_release_event(GtkWidget *widget, GdkEventButton *event, task 
                 XIconifyWindow (GDK_DISPLAY(), tk->win, DefaultScreen(GDK_DISPLAY()));
                 DBG("XIconifyWindow %x\n", tk->win);
             } else {
-                if (tk->desktop != -1 && tk->desktop != tk->tb->cur_desk) {
-                    //goto tk->desktop
-                    Xclimsg(GDK_ROOT_WINDOW(), a_NET_CURRENT_DESKTOP, tk->desktop, 0, 0, 0, 0);
-                    XSync (gdk_display, False);
-                }
-		if(use_net_active) {
-		    Xclimsg(tk->win, a_NET_ACTIVE_WINDOW, 2, event->time, 0, 0, 0);
-		} else {
-		    XRaiseWindow (GDK_DISPLAY(), tk->win);
-		    XSetInputFocus (GDK_DISPLAY(), tk->win, RevertToNone, CurrentTime);
-		    DBG("XRaiseWindow %x\n", tk->win);
-		}
+                tk_raise_window( tk, event->time );
             }
         }
     } else if (event->button == 2) {
@@ -928,12 +983,17 @@ tb_net_active_window(GtkWidget *widget, taskbar *tb)
     RET();
 }
 
+/* For older Xlib headers */
+#ifndef XUrgencyHint
+#define XUrgencyHint (1 << 8)
+#endif
+
 static void
 tb_propertynotify(taskbar *tb, XEvent *ev)
 {
     Atom at;
     Window win;
-
+    XWMHints* hints;
     
     ENTER;
     DBG("win=%x\n", ev->xproperty.window);
@@ -972,6 +1032,26 @@ tb_propertynotify(taskbar *tb, XEvent *ev)
 	    gtk_image_set_from_pixbuf (GTK_IMAGE(tk->image), tk->pixbuf);
             DBG("#3 %d\n", GDK_IS_PIXBUF (tk->pixbuf));
       	    //tk_display(tb, tk);
+	    hints = (XWMHints *) get_xaproperty (tk->win, XA_WM_HINTS, XA_WM_HINTS, 0);
+	    if( hints ) {
+            if( tb->use_urgency_hint ) {
+                if( hints->flags & XUrgencyHint ) /* Got urgency hint */
+                {
+                    tk->urgency = 1;
+                    /* Flash button for this window */
+                    tk_flash_window( tk );
+                } else if( tk->urgency == 1 ) {
+                    tk->urgency = 0;
+                    tk_unflash_window( tk );
+                }
+            }
+            XFree( hints );
+        }
+        else if( tk->urgency == 1 )
+        {
+            tk->urgency = 0;
+            tk_unflash_window( tk );
+		}
 	} else if (at == a_NET_WM_STATE) {
             net_wm_state nws;
 
@@ -1190,6 +1270,7 @@ taskbar_constructor(plugin *p)
     tb->normal_state      = GTK_STATE_NORMAL;
     tb->spacing           = 1;
     tb->use_mouse_wheel   = 1;
+    tb->use_urgency_hint  = 1;
     s.len = 256;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
         if (s.type == LINE_NONE) {
@@ -1215,7 +1296,9 @@ taskbar_constructor(plugin *p)
             } else if (!g_ascii_strcasecmp(s.t[0], "spacing")) {
                 tb->spacing = atoi(s.t[1]);
             } else if (!g_ascii_strcasecmp(s.t[0], "UseMouseWheel")) {
-	        tb->use_mouse_wheel = str2num(bool_pair, s.t[1], 1);
+                tb->use_mouse_wheel = str2num(bool_pair, s.t[1], 1);
+            } else if (!g_ascii_strcasecmp(s.t[0], "UseUrgencyHint")) {
+                tb->use_urgency_hint = str2num(bool_pair, s.t[1], 1);
             } else {
                 ERR( "taskbar: unknown var %s\n", s.t[0]);
                 goto error;
