@@ -108,6 +108,10 @@ static gchar *taskbar_rc = "style 'taskbar-style'\n"
 
 static gboolean use_net_active=FALSE;
 
+#define DRAG_ACTIVE_DELAY	400
+static GtkWidget* current_drag_over_button = NULL;
+static guint drag_timeout = 0;
+ 
 
 
 #define TASK_WIDTH_MAX   200
@@ -622,6 +626,45 @@ tk_callback_enter( GtkWidget *widget, task *tk )
     RET();
 }
 
+static gboolean delay_active_win( gpointer user_data )
+{
+    task* tk = (task*)user_data;
+    tk_raise_window( tk, CurrentTime );
+    drag_timeout = 0;
+    return FALSE;
+}
+
+static gboolean tk_callback_drag_motion( GtkWidget *widget, 
+                                         GdkDragContext *drag_context,
+                                         gint x, gint y,
+                                         guint time, gpointer user_data )
+{
+    /* prevent excessive motion notification */
+    if( current_drag_over_button != widget )
+    {
+        current_drag_over_button = widget;
+        drag_timeout = g_timeout_add( DRAG_ACTIVE_DELAY, 
+                                      delay_active_win, user_data );
+    }
+    return FALSE;
+}
+
+static gboolean tk_callback_drag_leave( GtkWidget *widget, 
+                                        GdkDragContext *drag_context,
+                                        guint time, gpointer user_data )
+{
+    if( current_drag_over_button == widget )
+    {
+        current_drag_over_button = NULL;
+        if( drag_timeout )
+        {
+            g_source_remove( drag_timeout );
+            drag_timeout = 0;
+        }
+    }
+    return FALSE;
+}
+
 static gboolean
 tk_callback_expose(GtkWidget *widget, GdkEventExpose *event, task *tk)
 {
@@ -778,7 +821,7 @@ static void
 tk_build_gui(taskbar *tb, task *tk)
 {
     GtkWidget *w1;
-    
+	GtkTargetEntry targets[] = {{ "text/uri-list", 0, 0 }};
     ENTER;
     g_assert ((tb != NULL) && (tk != NULL));
 
@@ -806,7 +849,18 @@ tk_build_gui(taskbar *tb, task *tk)
          G_CALLBACK (tk_callback_enter), (gpointer) tk);
     g_signal_connect_after (G_OBJECT (tk->button), "expose-event",
           G_CALLBACK (tk_callback_expose), (gpointer) tk);
-    if (tb->use_mouse_wheel)
+    gtk_drag_dest_set( tk->button, 
+                       GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+                       targets, G_N_ELEMENTS(targets),
+                       GDK_ACTION_MOVE|GDK_ACTION_COPY|GDK_ACTION_LINK|
+                       GDK_ACTION_PRIVATE|GDK_ACTION_ASK );
+    gtk_widget_add_events (tk->button, GDK_BUTTON_MOTION_MASK|
+                           GDK_ENTER_NOTIFY_MASK|GDK_LEAVE_NOTIFY_MASK );
+    g_signal_connect (G_OBJECT (tk->button), "drag-motion",
+                      G_CALLBACK (tk_callback_drag_motion), (gpointer) tk);
+    g_signal_connect (G_OBJECT (tk->button), "drag-leave",
+                      G_CALLBACK (tk_callback_drag_leave), (gpointer) tk);
+	if (tb->use_mouse_wheel)
     	g_signal_connect_after(G_OBJECT(tk->button), "scroll-event",
               G_CALLBACK(tk_callback_scroll_event), (gpointer)tk);	  
 
@@ -1350,3 +1404,4 @@ plugin_class taskbar_plugin_class = {
     constructor : taskbar_constructor,
     destructor  : taskbar_destructor,
 };
+
