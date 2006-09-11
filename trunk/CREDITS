@@ -1,9 +1,14 @@
-I'd like to thank to GNOME project. I learn a lot from its code
+I'd like to thank GNOME project. I learn a lot from its code
 and some pieces were used in fbpanel. Correct for version 3.0,
 systray code and wm icon code were copied from GNOME
 
 Credits to all people who contributed by writing code and solving
 bugs. 
+    PCMan          <pcman.tw at gmail.com>
+        Urgency hint implementation
+        Raise window when drag target is over its name in taskbar
+        Building menu from *.desktop files
+        i18n support
 	Joe MacDonald  <joeythesaint at users.sourceforge.net>
 	Jens Georg     <phako at users.sourceforge.net>
 	and others

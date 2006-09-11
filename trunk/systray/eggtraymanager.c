@@ -547,38 +547,31 @@ egg_tray_manager_get_child_title (EggTrayManager *manager,
   int format;
   gulong nitems;
   gulong bytes_after;
-  guchar *tmp;
-
+  guchar *tmp = NULL;
+  
   g_return_val_if_fail (EGG_IS_TRAY_MANAGER (manager), NULL);
   g_return_val_if_fail (GTK_IS_SOCKET (child), NULL);
   
   child_window = g_object_get_data (G_OBJECT (child),
-				    "egg-tray-child-window");
-
+        "egg-tray-child-window");
+  
   utf8_string = XInternAtom (GDK_DISPLAY (), "UTF8_STRING", False);
   atom = XInternAtom (GDK_DISPLAY (), "_NET_WM_NAME", False);
+  
+  gdk_error_trap_push();
 
-  gdk_error_trap_push ();
-
-  result = XGetWindowProperty (GDK_DISPLAY (),
-			       *child_window,
-			       atom,
-			       0, G_MAXLONG,
-			       False, utf8_string,
-			       &type, &format, &nitems,
-			       &bytes_after, &tmp);
+  result = XGetWindowProperty (GDK_DISPLAY (), *child_window, atom, 0,
+        G_MAXLONG, False, utf8_string, &type, &format, &nitems,
+        &bytes_after, &tmp);
   val = (gchar *) tmp;
-  if (gdk_error_trap_pop () || result != Success)
+  if (gdk_error_trap_pop() || result != Success || type != utf8_string)
     return NULL;
 
-  if (type != utf8_string ||
-      format != 8 ||
-      nitems == 0)
-    {
+  if (format != 8 || nitems == 0) {
       if (val)
-	XFree (val);
+          XFree (val);
       return NULL;
-    }
+  }
 
   if (!g_utf8_validate (val, nitems, NULL))
     {

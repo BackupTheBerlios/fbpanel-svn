@@ -160,22 +160,21 @@ fb_bg_finalize (GObject *object)
 static Pixmap
 fb_bg_get_xrootpmap(FbBg *bg)
 {
-    Pixmap ret;
+    Pixmap ret = None;
 
     ENTER;
-    ret = None;    
     if (bg->id) {
         int  act_format, c = 2 ;
         u_long  nitems ;
         u_long  bytes_after ;
-        u_char *prop ;
+        u_char *prop = NULL;
         Atom ret_type;
 
         do {
             if (XGetWindowProperty(bg->dpy, bg->xroot, bg->id, 0, 1,
                       False, XA_PIXMAP, &ret_type, &act_format,
                       &nitems, &bytes_after, &prop) == Success) {
-                if (prop && ret_type == XA_PIXMAP) {
+                if (ret_type == XA_PIXMAP) {
                     ret = *((Pixmap *)prop);
                     XFree(prop);
                     break;
@@ -183,7 +182,6 @@ fb_bg_get_xrootpmap(FbBg *bg)
             }
         } while (--c > 0);
     }
-    //fprintf(stderr, "_XROOTPMAP_ID = 0x%x\n", ret);
     RET(ret);
 
 }
@@ -201,7 +199,8 @@ fb_bg_get_xroot_pix_for_win(FbBg *bg, GtkWidget *widget)
 
     ENTER;
     win =  GDK_WINDOW_XWINDOW(widget->window); 
-    if (!XGetGeometry(bg->dpy, win, &dummy, &x, &y, &width, &height, &border, &depth)) {
+    if (!XGetGeometry(bg->dpy, win, &dummy, &x, &y, &width, &height, &border,
+              &depth)) {
         DBG2("XGetGeometry failed\n");
         RET(NULL);
     }
