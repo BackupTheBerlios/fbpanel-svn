@@ -121,6 +121,8 @@ static void tb_propertynotify(taskbar *tb, XEvent *ev);
 static GdkFilterReturn tb_event_filter( XEvent *, GdkEvent *, taskbar *);
 static void taskbar_destructor(plugin *p);
 
+static gboolean tk_has_urgency( task* tk );
+
 static void tk_flash_window( task *tk );
 static void tk_unflash_window( task *tk );
 static void tk_raise_window( task *tk, guint32 time );
@@ -236,6 +238,8 @@ del_task (taskbar * tb, task *tk, int hdel)
 {
     ENTER;
     DBG("deleting(%d)  %08x %s\n", hdel, tk->win, tk->name);
+    if( tk->flash_timeout )
+        g_source_remove( tk->flash_timeout );
     gtk_widget_destroy(tk->eb);
     tb->num_tasks--; 
     tk_free_names(tk);	    
@@ -494,7 +498,7 @@ get_wm_icon(Window tkwin, int iw, int ih)
     if ((hints->flags & IconMaskHint))
         xmask = hints->icon_mask;
 
-    XFree (hints);
+    XFree(hints);
     if (xpixmap == None)
         RET(NULL);
     
@@ -561,9 +565,10 @@ tk_update_icon (taskbar *tb, task *tk, Atom a)
 
 static gboolean on_flash_win( task *tk )
 {
-    tk->flash_state = ! tk->flash_state;
-    gtk_widget_set_state( tk->button, tk->flash_state ? GTK_STATE_SELECTED : tk->tb->normal_state );
-    gtk_widget_queue_draw( tk->button );
+    tk->flash_state = !tk->flash_state;
+    gtk_widget_set_state(tk->button,
+          tk->flash_state ? GTK_STATE_SELECTED : tk->tb->normal_state);
+    gtk_widget_queue_draw(tk->button);
     return TRUE;
 }
 
@@ -572,20 +577,20 @@ tk_flash_window( task *tk )
 {
     gint interval;
     tk->flash = 1;
-    tk->flash_state = ! tk->flash_state;
-    if( tk->flash_timeout )
+    tk->flash_state = !tk->flash_state;
+    if (tk->flash_timeout)
         return;
     g_object_get( gtk_widget_get_settings(tk->button),
-                  "gtk-cursor-blink-time", &interval, NULL );
-	tk->flash_timeout = g_timeout_add( interval, (GSourceFunc)on_flash_win, tk );
+          "gtk-cursor-blink-time", &interval, NULL );
+    tk->flash_timeout = g_timeout_add(interval, (GSourceFunc)on_flash_win, tk);
 }
 
 static void
 tk_unflash_window( task *tk )
 {
     tk->flash = tk->flash_state = 0;
-    if( tk->flash_timeout ) {
-        g_source_remove( tk->flash_timeout );
+    if (tk->flash_timeout) {
+        g_source_remove(tk->flash_timeout);
         tk->flash_timeout = 0;
     }
 }
@@ -821,7 +826,7 @@ static void
 tk_build_gui(taskbar *tb, task *tk)
 {
     GtkWidget *w1;
-	GtkTargetEntry targets[] = {{ "text/uri-list", 0, 0 }};
+    GtkTargetEntry targets[] = {{ "text/uri-list", 0, 0 }};
     ENTER;
     g_assert ((tb != NULL) && (tk != NULL));
 
@@ -842,25 +847,25 @@ tk_build_gui(taskbar *tb, task *tk)
     gtk_container_set_border_width(GTK_CONTAINER(tk->button), 0);
     gtk_widget_add_events (tk->button, GDK_BUTTON_RELEASE_MASK );
     g_signal_connect(G_OBJECT(tk->button), "button_release_event",
-         G_CALLBACK(tk_callback_button_release_event), (gpointer)tk);  
+          G_CALLBACK(tk_callback_button_release_event), (gpointer)tk);  
     g_signal_connect_after (G_OBJECT (tk->button), "leave",
-         G_CALLBACK (tk_callback_leave), (gpointer) tk);    
+          G_CALLBACK (tk_callback_leave), (gpointer) tk);    
     g_signal_connect_after (G_OBJECT (tk->button), "enter",
-         G_CALLBACK (tk_callback_enter), (gpointer) tk);
+          G_CALLBACK (tk_callback_enter), (gpointer) tk);
     g_signal_connect_after (G_OBJECT (tk->button), "expose-event",
           G_CALLBACK (tk_callback_expose), (gpointer) tk);
     gtk_drag_dest_set( tk->button, 
-                       GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
-                       targets, G_N_ELEMENTS(targets),
-                       GDK_ACTION_MOVE|GDK_ACTION_COPY|GDK_ACTION_LINK|
-                       GDK_ACTION_PRIVATE|GDK_ACTION_ASK );
+          GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+          targets, G_N_ELEMENTS(targets),
+          GDK_ACTION_MOVE|GDK_ACTION_COPY|GDK_ACTION_LINK|
+          GDK_ACTION_PRIVATE|GDK_ACTION_ASK );
     gtk_widget_add_events (tk->button, GDK_BUTTON_MOTION_MASK|
-                           GDK_ENTER_NOTIFY_MASK|GDK_LEAVE_NOTIFY_MASK );
+          GDK_ENTER_NOTIFY_MASK|GDK_LEAVE_NOTIFY_MASK );
     g_signal_connect (G_OBJECT (tk->button), "drag-motion",
-                      G_CALLBACK (tk_callback_drag_motion), (gpointer) tk);
+          G_CALLBACK (tk_callback_drag_motion), (gpointer) tk);
     g_signal_connect (G_OBJECT (tk->button), "drag-leave",
-                      G_CALLBACK (tk_callback_drag_leave), (gpointer) tk);
-	if (tb->use_mouse_wheel)
+          G_CALLBACK (tk_callback_drag_leave), (gpointer) tk);
+    if (tb->use_mouse_wheel)
     	g_signal_connect_after(G_OBJECT(tk->button), "scroll-event",
               G_CALLBACK(tk_callback_scroll_event), (gpointer)tk);	  
 
@@ -895,6 +900,10 @@ tk_build_gui(taskbar *tb, task *tk)
         gtk_widget_hide(tk->eb);
     }
 
+    if (tk->urgency) {
+        /* Flash button for window with urgency hint */
+        tk_flash_window(tk);
+    }
     RET();
 }
 
@@ -947,10 +956,13 @@ tb_net_client_list(GtkWidget *widget, taskbar *tb)
             tb->num_tasks++;
             tk->win = tb->wins[i];
             tk->tb = tb;
-            tk->iconified = (get_wm_state (tk->win) == IconicState);
+            tk->iconified = (get_wm_state(tk->win) == IconicState);
             tk->desktop = get_net_wm_desktop(tk->win);
             tk->nws = nws;
             tk->nwwt = nwwt;
+            if( tb->use_urgency_hint && tk_has_urgency(tk)) {
+                tk->urgency = 1;
+            }
          
             tk_build_gui(tb, tk);
             tk_set_names(tk);
@@ -1042,12 +1054,26 @@ tb_net_active_window(GtkWidget *widget, taskbar *tb)
 #define XUrgencyHint (1 << 8)
 #endif
 
+static gboolean
+tk_has_urgency( task* tk )
+{
+    XWMHints* hints;
+    
+    tk->urgency = 0;
+    hints = (XWMHints *) get_xaproperty (tk->win, XA_WM_HINTS, XA_WM_HINTS, 0);
+    if (hints) {
+        if (hints->flags & XUrgencyHint) /* Got urgency hint */
+            tk->urgency = 1;
+        XFree( hints );
+    }
+    return tk->urgency;
+}
+
 static void
 tb_propertynotify(taskbar *tb, XEvent *ev)
 {
     Atom at;
     Window win;
-    XWMHints* hints;
     
     ENTER;
     DBG("win=%x\n", ev->xproperty.window);
@@ -1080,33 +1106,18 @@ tb_propertynotify(taskbar *tb, XEvent *ev)
 	    /* some windows set their WM_HINTS icon after mapping */
 	    DBG("XA_WM_HINTS\n");
             //get_wmclass(tk);
-            DBG("#0 %d\n", GDK_IS_PIXBUF (tk->pixbuf));
 	    tk_update_icon (tb, tk, XA_WM_HINTS);
-            DBG("#1 %d\n", GDK_IS_PIXBUF (tk->pixbuf));
 	    gtk_image_set_from_pixbuf (GTK_IMAGE(tk->image), tk->pixbuf);
-            DBG("#3 %d\n", GDK_IS_PIXBUF (tk->pixbuf));
-      	    //tk_display(tb, tk);
-	    hints = (XWMHints *) get_xaproperty (tk->win, XA_WM_HINTS, XA_WM_HINTS, 0);
-	    if( hints ) {
-            if( tb->use_urgency_hint ) {
-                if( hints->flags & XUrgencyHint ) /* Got urgency hint */
-                {
-                    tk->urgency = 1;
-                    /* Flash button for this window */
-                    tk_flash_window( tk );
-                } else if( tk->urgency == 1 ) {
-                    tk->urgency = 0;
-                    tk_unflash_window( tk );
+            if (tb->use_urgency_hint) {
+                if (tk_has_urgency(tk)) {
+                    //tk->urgency = 1;
+                    tk_flash_window(tk);
+                } else {
+                    //tk->urgency = 0;
+                    tk_unflash_window(tk);
                 }
             }
-            XFree( hints );
-        }
-        else if( tk->urgency == 1 )
-        {
-            tk->urgency = 0;
-            tk_unflash_window( tk );
-		}
-	} else if (at == a_NET_WM_STATE) {
+        } else if (at == a_NET_WM_STATE) {
             net_wm_state nws;
 
 	    DBG("_NET_WM_STATE\n");

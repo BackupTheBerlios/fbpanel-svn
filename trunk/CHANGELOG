@@ -2,6 +2,8 @@
 New Features
 * [ 1295234 ] Detect Window "Urgency".
 * Raise window when drag target is over its name in taskbar
+* fixing meory leaks from XGetWindowProperty.
+* fix urgency code to catch up urgency of new windows 
 
 4.5
 Fixed bugs
