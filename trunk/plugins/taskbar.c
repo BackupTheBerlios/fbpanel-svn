@@ -240,7 +240,7 @@ del_task (taskbar * tb, task *tk, int hdel)
     DBG("deleting(%d)  %08x %s\n", hdel, tk->win, tk->name);
     if( tk->flash_timeout )
         g_source_remove( tk->flash_timeout );
-    gtk_widget_destroy(tk->eb);
+    gtk_widget_destroy(tk->button);
     tb->num_tasks--; 
     tk_free_names(tk);	    
     if (tb->focused == tk)
@@ -670,6 +670,7 @@ static gboolean tk_callback_drag_leave( GtkWidget *widget,
     return FALSE;
 }
 
+#if 0
 static gboolean
 tk_callback_expose(GtkWidget *widget, GdkEventExpose *event, task *tk)
 {
@@ -703,7 +704,7 @@ tk_callback_expose(GtkWidget *widget, GdkEventExpose *event, task *tk)
     }
     RET(FALSE);
 }
-
+#endif
 
 static gint
 tk_callback_scroll_event (GtkWidget *widget, GdkEventScroll *event, task *tk)
@@ -792,7 +793,7 @@ tk_update(gpointer key, task *tk, taskbar *tb)
               (tk->focused) ? tb->focused_state : tb->normal_state);
         gtk_widget_queue_draw(tk->button);
         //_gtk_button_set_depressed(GTK_BUTTON(tk->button), tk->focused);
-	gtk_widget_show(tk->eb);
+	gtk_widget_show(tk->button);
 
         if (tb->tooltips) {
             //DBG2("tip %x %s\n", tk->win, tk->name);
@@ -800,7 +801,7 @@ tk_update(gpointer key, task *tk, taskbar *tb)
         }
 	RET();
     }    
-    gtk_widget_hide(tk->eb);
+    gtk_widget_hide(tk->button);
     RET();
 }
 
@@ -840,8 +841,8 @@ tk_build_gui(taskbar *tb, task *tk)
         XSelectInput (GDK_DISPLAY(), tk->win, PropertyChangeMask | StructureNotifyMask);
 
     /* button */
-    tk->eb = gtk_event_box_new();
-    gtk_container_set_border_width(GTK_CONTAINER(tk->eb), 0);
+    //tk->eb = gtk_event_box_new();
+    //gtk_container_set_border_width(GTK_CONTAINER(tk->eb), 0);
     tk->button = gtk_button_new();
     gtk_widget_show(tk->button);
     gtk_container_set_border_width(GTK_CONTAINER(tk->button), 0);
@@ -852,8 +853,10 @@ tk_build_gui(taskbar *tb, task *tk)
           G_CALLBACK (tk_callback_leave), (gpointer) tk);    
     g_signal_connect_after (G_OBJECT (tk->button), "enter",
           G_CALLBACK (tk_callback_enter), (gpointer) tk);
+#if 0
     g_signal_connect_after (G_OBJECT (tk->button), "expose-event",
           G_CALLBACK (tk_callback_expose), (gpointer) tk);
+#endif
     gtk_drag_dest_set( tk->button, 
           GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
           targets, G_N_ELEMENTS(targets),
@@ -884,6 +887,7 @@ tk_build_gui(taskbar *tb, task *tk)
     /* name */
     tk->label = gtk_label_new(tk->iconified ? tk->iname : tk->name);
     //gtk_label_set_justify(GTK_LABEL(tk->label), GTK_JUSTIFY_LEFT);
+    gtk_label_set_ellipsize(GTK_LABEL(tk->label), PANGO_ELLIPSIZE_END);
     gtk_misc_set_alignment(GTK_MISC(tk->label), 0.0, 0.5); 
     if (!tb->icons_only)
         gtk_widget_show(tk->label);
@@ -891,14 +895,14 @@ tk_build_gui(taskbar *tb, task *tk)
     gtk_widget_show(w1);
     gtk_container_add (GTK_CONTAINER (tk->button), w1);
 
-    gtk_container_add (GTK_CONTAINER (tk->eb), tk->button);
-    gtk_box_pack_start(GTK_BOX(tb->bar), tk->eb, FALSE, TRUE, 0);
+    //gtk_container_add (GTK_CONTAINER (tk->eb), tk->button);
+    gtk_box_pack_start(GTK_BOX(tb->bar), tk->button, FALSE, TRUE, 0);
     GTK_WIDGET_UNSET_FLAGS (tk->button, GTK_CAN_FOCUS);    
     GTK_WIDGET_UNSET_FLAGS (tk->button, GTK_CAN_DEFAULT);
     
-    gtk_widget_show(tk->eb);
+    gtk_widget_show(tk->button);
     if (!task_visible(tb, tk)) {
-        gtk_widget_hide(tk->eb);
+        gtk_widget_hide(tk->button);
     }
 
     if (tk->urgency) {
@@ -1233,20 +1237,8 @@ taskbar_build_gui(plugin *p)
     GtkBarOrientation  bo;
     
     ENTER;
-    /*
-    tb->hbox = tb->plug->panel->my_box_new(FALSE, 0);
-    gtk_container_add (GTK_CONTAINER (p->pwid), tb->hbox);
-    gtk_widget_show(tb->hbox);
-    gtk_container_set_border_width(GTK_CONTAINER(tb->hbox), 0);
-
     bo = (tb->plug->panel->orientation == ORIENT_HORIZ) ? GTK_BAR_HORIZ : GTK_BAR_VERTICAL;
-    tb->bbox = gtk_bar_new(bo, 2);
-    gtk_bar_set_max_child_size(GTK_BAR(tb->bbox), tb->task_width_max);
-    gtk_widget_show(tb->bbox);
-    gtk_box_pack_start(GTK_BOX(tb->hbox), tb->bbox, TRUE, TRUE, 0);
-    */
-    bo = (tb->plug->panel->orientation == ORIENT_HORIZ) ? GTK_BAR_HORIZ : GTK_BAR_VERTICAL;
-    tb->bar = gtk_bar_new(bo, tb->spacing); 
+    tb->bar = gtk_bar_new(bo, tb->spacing);
     if (tb->icons_only) {
         gtk_bar_set_max_child_size(GTK_BAR(tb->bar),
               GTK_WIDGET(p->panel->box)->allocation.height -2);        
@@ -1257,7 +1249,6 @@ taskbar_build_gui(plugin *p)
   
     tb->gen_pixbuf =  gdk_pixbuf_new_from_xpm_data((const char **)icon_xpm);
 
-    //XSelectInput (GDK_DISPLAY(), GDK_ROOT_WINDOW(), PropertyChangeMask);
     gdk_window_add_filter(NULL, (GdkFilterFunc)tb_event_filter, tb );
 
     g_signal_connect (G_OBJECT (fbev), "current_desktop",
@@ -1276,7 +1267,7 @@ taskbar_build_gui(plugin *p)
         tb->tips = gtk_tooltips_new();
 
     tb->menu = taskbar_make_menu(tb);
-    //gtk_container_set_border_width(GTK_CONTAINER(p->pwid), 0);
+    gtk_container_set_border_width(GTK_CONTAINER(p->pwid), 0);
     gtk_widget_show_all(tb->bar);
     RET();
 }

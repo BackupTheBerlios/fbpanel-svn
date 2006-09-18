@@ -6,6 +6,9 @@ New Features
 * fix urgency code to catch up urgency of new windows 
 * taskbar: correct position of task's label
 * taskbar: remove extra spaces
+* taskbar: do not create event box beneath task button
+* taskbar: use default expose method in gtk_bar
+* taskbar; use default expose method in task button
 
 4.5
 Fixed bugs

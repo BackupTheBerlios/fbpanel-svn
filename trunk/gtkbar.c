@@ -35,7 +35,7 @@ static void gtk_bar_class_init    (GtkBarClass   *klass);
 static void gtk_bar_init          (GtkBar        *box);
 static void gtk_bar_size_request  (GtkWidget *widget, GtkRequisition *requisition);
 static void gtk_bar_size_allocate (GtkWidget *widget, GtkAllocation  *allocation);
-static gint gtk_bar_expose        (GtkWidget *widget, GdkEventExpose *event);
+//static gint gtk_bar_expose        (GtkWidget *widget, GdkEventExpose *event);
 
 static GtkBoxClass *parent_class = NULL;
 
@@ -76,7 +76,7 @@ gtk_bar_class_init (GtkBarClass *class)
 
     widget_class->size_request = gtk_bar_size_request;
     widget_class->size_allocate = gtk_bar_size_allocate;
-    widget_class->expose_event = gtk_bar_expose;
+    //widget_class->expose_event = gtk_bar_expose;
 
 }
 
@@ -84,7 +84,7 @@ static void
 gtk_bar_init (GtkBar *bar)
 {
     bar->max_child_size = MAX_CHILD_SIZE;
-    gtk_widget_set_redraw_on_allocate (GTK_WIDGET (bar), TRUE);
+    //gtk_widget_set_redraw_on_allocate (GTK_WIDGET (bar), TRUE);
 }
 
 GtkWidget*
@@ -226,7 +226,7 @@ gtk_bar_set_max_child_size(GtkBar *bar, gint size)
     }
 }
 
-
+#if 0
 static gint
 gtk_bar_expose (GtkWidget *widget, GdkEventExpose *event)
 {
@@ -246,3 +246,4 @@ gtk_bar_expose (GtkWidget *widget, GdkEventExpose *event)
     }
     RET(FALSE);
 }
+#endif
