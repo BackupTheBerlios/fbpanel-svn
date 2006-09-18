@@ -841,7 +841,7 @@ tk_build_gui(taskbar *tb, task *tk)
 
     /* button */
     tk->eb = gtk_event_box_new();
-    gtk_container_set_border_width(GTK_CONTAINER(tk->eb), 1);
+    gtk_container_set_border_width(GTK_CONTAINER(tk->eb), 0);
     tk->button = gtk_button_new();
     gtk_widget_show(tk->button);
     gtk_container_set_border_width(GTK_CONTAINER(tk->button), 0);
@@ -879,14 +879,15 @@ tk_build_gui(taskbar *tb, task *tk)
     tk_update_icon(tb, tk, None);
     tk->image = gtk_image_new_from_pixbuf(tk->pixbuf );
     gtk_widget_show(tk->image);
-    gtk_box_pack_start(GTK_BOX(w1), tk->image, FALSE, FALSE, 1);
+    gtk_box_pack_start(GTK_BOX(w1), tk->image, FALSE, FALSE, 0);
 
     /* name */
     tk->label = gtk_label_new(tk->iconified ? tk->iname : tk->name);
-    gtk_label_set_justify(GTK_LABEL(tk->label), GTK_JUSTIFY_LEFT);
+    //gtk_label_set_justify(GTK_LABEL(tk->label), GTK_JUSTIFY_LEFT);
+    gtk_misc_set_alignment(GTK_MISC(tk->label), 0.0, 0.5); 
     if (!tb->icons_only)
         gtk_widget_show(tk->label);
-    gtk_box_pack_start(GTK_BOX(w1), tk->label, FALSE, TRUE, 0);    
+    gtk_box_pack_start(GTK_BOX(w1), tk->label, TRUE, TRUE, 0);    
     gtk_widget_show(w1);
     gtk_container_add (GTK_CONTAINER (tk->button), w1);
 

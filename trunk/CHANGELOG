@@ -4,6 +4,8 @@ New Features
 * Raise window when drag target is over its name in taskbar
 * fixing meory leaks from XGetWindowProperty.
 * fix urgency code to catch up urgency of new windows 
+* taskbar: correct position of task's label
+* taskbar: remove extra spaces
 
 4.5
 Fixed bugs
