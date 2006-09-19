@@ -81,7 +81,8 @@ typedef struct _taskbar{
     char **desk_names;
     int desk_namesno;
     int desk_num;
-  
+    guint dnd_activate;
+    
     unsigned int iconsize;
     unsigned int task_width_max;
     unsigned int accept_skip_pager : 1;
@@ -108,9 +109,7 @@ static gchar *taskbar_rc = "style 'taskbar-style'\n"
 
 static gboolean use_net_active=FALSE;
 
-#define DRAG_ACTIVE_DELAY	400
-static GtkWidget* current_drag_over_button = NULL;
-static guint drag_timeout = 0;
+#define DRAG_ACTIVE_DELAY	1000
  
 
 
@@ -159,23 +158,6 @@ accept_net_wm_window_type(net_wm_window_type *nwwt)
     ENTER;
     RET(!(nwwt->desktop || nwwt->dock || nwwt->splash));
 }
-
-
-
-/*
-static void
-get_wmclass(task *tk)
-{
-    ENTER;
-    if (tk->ch.res_name)
-        XFree(tk->ch.res_name);
-    if (tk->ch.res_class)
-        XFree(tk->ch.res_class);
-    if (!XGetClassHint (gdk_display, tk->win, &tk->ch)) 
-        tk->ch.res_class = tk->ch.res_name = NULL;
-    RET();
-}
-*/
 
 
 
@@ -631,43 +613,38 @@ tk_callback_enter( GtkWidget *widget, task *tk )
     RET();
 }
 
-static gboolean delay_active_win( gpointer user_data )
+static gboolean delay_active_win(task* tk)
 {
-    task* tk = (task*)user_data;
-    tk_raise_window( tk, CurrentTime );
-    drag_timeout = 0;
+    tk_raise_window(tk, CurrentTime);
+    tk->tb->dnd_activate = 0;
     return FALSE;
 }
 
-static gboolean tk_callback_drag_motion( GtkWidget *widget, 
-                                         GdkDragContext *drag_context,
-                                         gint x, gint y,
-                                         guint time, gpointer user_data )
+static gboolean
+tk_callback_drag_motion( GtkWidget *widget, 
+      GdkDragContext *drag_context,
+      gint x, gint y,
+      guint time, task *tk)
 {
     /* prevent excessive motion notification */
-    if( current_drag_over_button != widget )
-    {
-        current_drag_over_button = widget;
-        drag_timeout = g_timeout_add( DRAG_ACTIVE_DELAY, 
-                                      delay_active_win, user_data );
+    if (!tk->tb->dnd_activate) {
+        tk->tb->dnd_activate = g_timeout_add(DRAG_ACTIVE_DELAY, 
+              (GSourceFunc)delay_active_win, tk);
     }
-    return FALSE;
+    gdk_drag_status (drag_context,0,time);
+    return TRUE;
 }
 
-static gboolean tk_callback_drag_leave( GtkWidget *widget, 
-                                        GdkDragContext *drag_context,
-                                        guint time, gpointer user_data )
+static void
+tk_callback_drag_leave (GtkWidget *widget, 
+      GdkDragContext *drag_context,
+      guint time, task *tk)
 {
-    if( current_drag_over_button == widget )
-    {
-        current_drag_over_button = NULL;
-        if( drag_timeout )
-        {
-            g_source_remove( drag_timeout );
-            drag_timeout = 0;
-        }
+    if (tk->tb->dnd_activate) {
+        g_source_remove(tk->tb->dnd_activate);
+        tk->tb->dnd_activate = 0;
     }
-    return FALSE;
+    return;
 }
 
 #if 0
@@ -827,7 +804,7 @@ static void
 tk_build_gui(taskbar *tb, task *tk)
 {
     GtkWidget *w1;
-    GtkTargetEntry targets[] = {{ "text/uri-list", 0, 0 }};
+
     ENTER;
     g_assert ((tb != NULL) && (tk != NULL));
 
@@ -857,13 +834,7 @@ tk_build_gui(taskbar *tb, task *tk)
     g_signal_connect_after (G_OBJECT (tk->button), "expose-event",
           G_CALLBACK (tk_callback_expose), (gpointer) tk);
 #endif
-    gtk_drag_dest_set( tk->button, 
-          GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
-          targets, G_N_ELEMENTS(targets),
-          GDK_ACTION_MOVE|GDK_ACTION_COPY|GDK_ACTION_LINK|
-          GDK_ACTION_PRIVATE|GDK_ACTION_ASK );
-    gtk_widget_add_events (tk->button, GDK_BUTTON_MOTION_MASK|
-          GDK_ENTER_NOTIFY_MASK|GDK_LEAVE_NOTIFY_MASK );
+    gtk_drag_dest_set( tk->button, 0, NULL, 0, 0);
     g_signal_connect (G_OBJECT (tk->button), "drag-motion",
           G_CALLBACK (tk_callback_drag_motion), (gpointer) tk);
     g_signal_connect (G_OBJECT (tk->button), "drag-leave",

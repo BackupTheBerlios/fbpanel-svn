@@ -9,6 +9,7 @@ New Features
 * taskbar: do not create event box beneath task button
 * taskbar: use default expose method in gtk_bar
 * taskbar; use default expose method in task button
+* taskbar: cleaning up dnd code
 
 4.5
 Fixed bugs
