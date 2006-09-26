@@ -919,6 +919,7 @@ fb_button_new_from_file(gchar *fname, int width, int height, gulong hicolor, gbo
     gtk_container_set_border_width(GTK_CONTAINER(b), 0);
     GTK_WIDGET_UNSET_FLAGS (b, GTK_CAN_FOCUS);
     image = gtk_image_new_from_file_scaled(fname, width, height, keep_ratio);
+    gtk_misc_set_alignment(GTK_MISC(image), 0, 0);
     g_object_set_data(G_OBJECT(image), "hicolor", (gpointer)hicolor);
     gtk_misc_set_padding (GTK_MISC(image), 0, 0);
     if (hicolor > 0) {

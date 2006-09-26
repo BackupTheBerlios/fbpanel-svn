@@ -10,6 +10,7 @@ New Features
 * taskbar: use default expose method in gtk_bar
 * taskbar; use default expose method in task button
 * taskbar: cleaning up dnd code
+* launchbar: visual feedback on button press
 
 4.5
 Fixed bugs
