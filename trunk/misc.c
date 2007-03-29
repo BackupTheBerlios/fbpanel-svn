@@ -892,7 +892,6 @@ fb_button_new_from_icon_file(gchar *iname, gchar *fname, int width, int height,
       gulong hicolor, gboolean keep_ratio)
 {
     GtkWidget *b, *image;
-    GdkPixbuf *pb = NULL;
 
     ENTER;
     DBG("iname = %s\n", iname);
@@ -902,38 +901,7 @@ fb_button_new_from_icon_file(gchar *iname, gchar *fname, int width, int height,
     gtk_container_set_border_width(GTK_CONTAINER(b), 0);
     GTK_WIDGET_UNSET_FLAGS (b, GTK_CAN_FOCUS);
     //make image
-    if (iname) {
-        GtkIconInfo *icon_info;
-        icon_info = gtk_icon_theme_lookup_icon(gtk_icon_theme_get_default(),
-              iname, MAX(width, height), 0);
-        if (icon_info) {
-            
-            DBG("iname = %s file = %s size = %d\n", iname,
-                  gtk_icon_info_get_filename(icon_info),
-                  MAX(width, height));
-            pb = gdk_pixbuf_new_from_file_at_size(gtk_icon_info_get_filename(icon_info), width, height, NULL);
-            
-            gtk_icon_info_free(icon_info);
-        } else
-            DBG("icon info failed\n");
-        
-        
-        //pb = gtk_icon_theme_load_icon (gtk_icon_theme_get_default(), iname, MAX(width, height), 0, NULL);
-        DBG("%s\n", pb ? "from icon" : "");
-    }
-
-    if (fname && !pb) {
-        pb = gdk_pixbuf_new_from_file_at_size(fname, width, height, NULL);
-        DBG("%s\n", pb ? "from file" : "from stock");
-    }
-
-    if (pb) {
-        image = gtk_image_new_from_pixbuf(pb);
-        DBG("px: w=%d h=%d\n", gdk_pixbuf_get_width(pb), gdk_pixbuf_get_height(pb));
-        g_object_unref(pb);
-    } else 
-        image = gtk_image_new_from_stock(GTK_STOCK_MISSING_IMAGE, GTK_ICON_SIZE_BUTTON);
-    
+    image = fb_image_new_from_icon_file(iname, fname, width, height, hicolor, keep_ratio);
     gtk_container_add(GTK_CONTAINER(b), image);    
     //set calbacks
     gtk_misc_set_alignment(GTK_MISC(image), 0, 1);
@@ -981,22 +949,64 @@ fb_button_new_from_file(gchar *fname, int width, int height, gulong hicolor,
 }
 
 GtkWidget *
-fb_button_new_from_file_with_label(gchar *fname, int width, int height,
+fb_image_new_from_icon_file(gchar *iname, gchar *fname, int width, int height,
+      gulong hicolor, gboolean keep_ratio)
+{
+    GtkWidget *image;
+    GdkPixbuf *pb = NULL;
+    
+    if (iname) {
+        GtkIconInfo *icon_info;
+        icon_info = gtk_icon_theme_lookup_icon(gtk_icon_theme_get_default(),
+              iname, MAX(width, height), 0);
+        if (icon_info) {
+            
+            DBG("iname = %s file = %s size = %d\n", iname,
+                  gtk_icon_info_get_filename(icon_info),
+                  MAX(width, height));
+            pb = gdk_pixbuf_new_from_file_at_size(gtk_icon_info_get_filename(icon_info), width, height, NULL);
+            
+            gtk_icon_info_free(icon_info);
+        } else
+            DBG("icon info failed\n");
+        
+        
+        //pb = gtk_icon_theme_load_icon (gtk_icon_theme_get_default(), iname, MAX(width, height), 0, NULL);
+        DBG("%s\n", pb ? "from icon" : "");
+    }
+
+    if (fname && !pb) {
+        pb = gdk_pixbuf_new_from_file_at_size(fname, width, height, NULL);
+        DBG("%s\n", pb ? "from file" : "from stock");
+    }
+
+    if (pb) {
+        image = gtk_image_new_from_pixbuf(pb);
+        DBG("px: w=%d h=%d\n", gdk_pixbuf_get_width(pb), gdk_pixbuf_get_height(pb));
+        g_object_unref(pb);
+    } else 
+        image = gtk_image_new_from_stock(GTK_STOCK_MISSING_IMAGE, GTK_ICON_SIZE_BUTTON);
+    DBG("image = %p\n", image);
+    RET(image);
+}
+
+
+GtkWidget *
+fb_button_new_from_icon_file_with_label(gchar *iname, gchar *fname, int width, int height,
       gulong hicolor, gboolean keep_ratio, gchar *name)
 {
     GtkWidget *b, *image, *box, *label;
     
     ENTER;
     b = gtk_bgbox_new();
-    gtk_container_set_border_width(GTK_CONTAINER(b), 0);
-    GTK_WIDGET_UNSET_FLAGS (b, GTK_CAN_FOCUS);
 
     box = gtk_hbox_new(FALSE, 0);
     gtk_container_set_border_width(GTK_CONTAINER(box), 0);
     GTK_WIDGET_UNSET_FLAGS (box, GTK_CAN_FOCUS);
     gtk_container_add(GTK_CONTAINER(b), box);
-    
-    image = gtk_image_new_from_file_scaled(fname, width, height, keep_ratio);
+
+    DBG("here\n");
+    image = fb_image_new_from_icon_file(iname, fname, width, height, hicolor, keep_ratio);
     g_object_set_data(G_OBJECT(image), "hicolor", (gpointer)hicolor);
     gtk_misc_set_padding (GTK_MISC(image), 0, 0);
     if (hicolor > 0) {
@@ -1006,7 +1016,9 @@ fb_button_new_from_file_with_label(gchar *fname, int width, int height,
         g_signal_connect_swapped (G_OBJECT (b), "leave-notify-event",
               G_CALLBACK (fb_button_leave), image);
     }
+    DBG("here\n");
     gtk_box_pack_start(GTK_BOX(box), image, FALSE, FALSE, 0);
+    DBG("here\n");
     if (name) {
         label =  gtk_label_new(name);
         gtk_misc_set_padding(GTK_MISC(label), 2, 0);
