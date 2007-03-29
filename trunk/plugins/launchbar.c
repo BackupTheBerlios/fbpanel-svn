@@ -151,7 +151,7 @@ static int
 read_button(plugin *p)
 {
     launchbar *lb = (launchbar *)p->priv;
-    gchar *fname, *tooltip, *action;
+    gchar *iname, *fname, *tooltip, *action;
     //GdkPixbuf *gp, *gps;
     GtkWidget *button;
     line s;
@@ -166,7 +166,7 @@ read_button(plugin *p)
         RET(0);
     }
 
-    tooltip = fname = action = 0;
+    iname = tooltip = fname = action = 0;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
         if (s.type == LINE_NONE) {
             ERR( "launchbar: illegal token %s\n", s.str);
@@ -177,6 +177,8 @@ read_button(plugin *p)
                 fname = expand_tilda(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "tooltip"))
                 tooltip = g_strdup(s.t[1]);
+            else if (!g_ascii_strcasecmp(s.t[0], "icon"))
+                iname = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "action"))
                 action = g_strdup(s.t[1]);
             else {
@@ -189,26 +191,27 @@ read_button(plugin *p)
         }
     }
     DBG("action=%s\n", action);
-
+    //gtk_icon_theme_lookup_icon(lb->it, in->data, 40, GTK_ICON_LOOKUP_FORCE_SVG)));
     // button
     if (p->panel->orientation == ORIENT_HORIZ) {
-        w = 10000;
+        w = -1;
         //h = GTK_WIDGET(p->panel->box)->allocation.height;
         h = p->panel->ah;
     } else {
         //w = GTK_WIDGET(p->panel->box)->allocation.width;
         w = p->panel->aw;
-        h = 10000;
+        h = -1;
     }
-    button = fb_button_new_from_file(fname, w, h, 0x202020, TRUE);
+    w = h = lb->iconsize;
+    //button = fb_button_new_from_file(iname, fname, w, h, 0x202020, TRUE);
+    button = fb_button_new_from_icon_file(iname, fname, w, h, 0x202020, TRUE);
     //gtk_container_set_border_width(GTK_CONTAINER(button), 0);
     g_signal_connect (G_OBJECT (button), "button-release-event",
           G_CALLBACK (my_button_pressed), (gpointer) &lb->btns[lb->btn_num]);
     g_signal_connect (G_OBJECT (button), "button-press-event",
           G_CALLBACK (my_button_pressed), (gpointer) &lb->btns[lb->btn_num]);
 
-
-
+    DBG("here\n");
     
     GTK_WIDGET_UNSET_FLAGS (button, GTK_CAN_FOCUS);
     // DnD support
@@ -219,7 +222,7 @@ read_button(plugin *p)
     g_signal_connect (G_OBJECT(button), "drag_data_received",
           G_CALLBACK (drag_data_received_cb),  (gpointer) &lb->btns[lb->btn_num]);
 
- 
+    DBG("here\n");
 
     gtk_box_pack_start(GTK_BOX(lb->box), button, FALSE, FALSE, 0);
     gtk_widget_show(button);
@@ -227,8 +230,11 @@ read_button(plugin *p)
 
     if (p->panel->transparent) 
         gtk_bgbox_set_background(button, BG_ROOT, p->panel->tintcolor, p->panel->alpha);
-    
+
+    DBG("here\n");
     g_free(fname);
+    g_free(iname);
+    DBG("here\n");
     // tooltip
     if (tooltip) {
         gtk_tooltips_set_tip(GTK_TOOLTIPS (lb->tips), button, tooltip, NULL);
@@ -253,7 +259,7 @@ launchbar_constructor(plugin *p)
 {
     launchbar *lb; 
     line s;
-    GtkRequisition req;
+    //GtkRequisition req;
     static gchar *launchbar_rc = "style 'launchbar-style'\n"
         "{\n"
         "GtkWidget::focus-line-width = 0\n"
@@ -266,7 +272,7 @@ launchbar_constructor(plugin *p)
     ENTER;
     gtk_widget_set_name(p->pwid, "launchbar");
     gtk_rc_parse_string(launchbar_rc);
-    get_button_spacing(&req, GTK_CONTAINER(p->pwid), "");
+    //get_button_spacing(&req, GTK_CONTAINER(p->pwid), "");
     
     lb = g_new0(launchbar, 1);
     g_return_val_if_fail(lb != NULL, 0);
@@ -281,9 +287,9 @@ launchbar_constructor(plugin *p)
         lb->iconsize = GTK_WIDGET(p->panel->box)->allocation.height;
     else
         lb->iconsize = GTK_WIDGET(p->panel->box)->allocation.width;
-    DBG("button: req width=%d height=%d\n", req.width, req.height);            
+    //DBG("button: req width=%d height=%d\n", req.width, req.height);            
     DBG("iconsize=%d\n", lb->iconsize);
-    
+
     s.len = 256;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
         if (s.type == LINE_NONE) {
@@ -305,8 +311,25 @@ launchbar_constructor(plugin *p)
             goto error;
         }
     }
- 
 
+    if (0) {
+        GtkIconTheme* it = gtk_icon_theme_get_default();
+        GList* in = gtk_icon_theme_list_icons(it, NULL);
+        GList *tmp;
+        while ((tmp = in)) {
+            printf("%s %s\n", (char *)in->data, gtk_icon_info_get_filename(
+                       gtk_icon_theme_lookup_icon(it, in->data, 40, GTK_ICON_LOOKUP_FORCE_SVG)));
+         
+            in = g_list_next(in);
+            //g_free(tmp->data);
+            //g_list_free(tmp);
+        }
+        fflush(stdout);
+    }
+
+
+    
+    
     RET(1);
 
  error:
