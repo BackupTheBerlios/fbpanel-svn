@@ -61,6 +61,9 @@ void get_button_spacing(GtkRequisition *req, GtkContainer *parent, gchar *name);
 guint32 gcolor2rgb24(GdkColor *color);
 GtkWidget *fb_button_new_from_file(gchar *fname, int width, int height, gulong hicolor,
       gboolean keep_ratio);
+GtkWidget *fb_button_new_from_icon_file(gchar *iname, gchar *fname, int width, int height,
+      gulong hicolor, gboolean keep_ratio);
+
 GtkWidget *fb_button_new_from_file_with_label(gchar *fname, int width, int height,
       gulong hicolor, gboolean keep_ratio, gchar *label);
 #endif

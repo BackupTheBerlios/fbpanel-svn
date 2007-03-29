@@ -772,36 +772,15 @@ gtk_image_new_from_file_scaled(const gchar *file, gint width,
       gint height, gboolean keep_ratio)
 {
     GtkWidget *img;
-    GdkPixbuf *pb, *pb_scaled;
-    gfloat w, h, rw, rh;
+    GdkPixbuf *pb;
 
     ENTER;
-    if (!g_file_test(file, G_FILE_TEST_EXISTS)) 
-        goto err;
-
-    if (!(pb = gdk_pixbuf_new_from_file(file, NULL)))
-        goto err;
-    
-    if (keep_ratio) {
-        w = gdk_pixbuf_get_width(pb);
-        h = gdk_pixbuf_get_height(pb);
-        rw = w / width;
-        rh = h / height;
-        if (rw > rh)
-            height = h / rw;
-        else
-            width =  w / rh;
-    }
-    pb_scaled = gdk_pixbuf_scale_simple(pb, width, height,
-                                        GDK_INTERP_BILINEAR);
-    img = gtk_image_new_from_pixbuf(pb_scaled);			
-    g_object_unref(pb);
-    g_object_unref(pb_scaled);
-    RET(img);
-
- err:
-    img = gtk_image_new_from_stock(GTK_STOCK_MISSING_IMAGE,
-                                   GTK_ICON_SIZE_BUTTON);
+    if ((pb = gdk_pixbuf_new_from_file_at_size(file, width, height, NULL))) {
+        img = gtk_image_new_from_pixbuf(pb);			
+        g_object_unref(pb);
+    } else 
+        img = gtk_image_new_from_stock(GTK_STOCK_MISSING_IMAGE,
+              GTK_ICON_SIZE_BUTTON);
     RET(img);
 }
 
@@ -908,9 +887,75 @@ fb_button_leave (GtkImage *widget, GdkEventCrossing *event, gpointer user_data)
     RET(TRUE);    
 }
 
+GtkWidget *
+fb_button_new_from_icon_file(gchar *iname, gchar *fname, int width, int height,
+      gulong hicolor, gboolean keep_ratio)
+{
+    GtkWidget *b, *image;
+    GdkPixbuf *pb = NULL;
+
+    ENTER;
+    DBG2("iname = %s\n", iname);
+    DBG2("fname = %s\n", fname);
+    //make background window
+    b = gtk_bgbox_new();
+    gtk_container_set_border_width(GTK_CONTAINER(b), 0);
+    GTK_WIDGET_UNSET_FLAGS (b, GTK_CAN_FOCUS);
+    //make image
+    if (iname) {
+        GtkIconInfo *icon_info;
+        icon_info = gtk_icon_theme_lookup_icon(gtk_icon_theme_get_default(),
+              iname, MAX(width, height), 0);
+        if (icon_info) {
+            
+            DBG2("iname = %s file = %s size = %d\n", iname,
+                  gtk_icon_info_get_filename(icon_info),
+                  MAX(width, height));
+            pb = gdk_pixbuf_new_from_file_at_size(gtk_icon_info_get_filename(icon_info), width, height, NULL);
+            
+            gtk_icon_info_free(icon_info);
+        } else
+            DBG2("icon info failed\n");
+        
+        
+        //pb = gtk_icon_theme_load_icon (gtk_icon_theme_get_default(), iname, MAX(width, height), 0, NULL);
+        DBG2("%s\n", pb ? "from icon" : "");
+    }
+
+    if (fname && !pb) {
+        pb = gdk_pixbuf_new_from_file_at_size(fname, width, height, NULL);
+        DBG2("%s\n", pb ? "from file" : "from stock");
+    }
+
+    if (pb) {
+        image = gtk_image_new_from_pixbuf(pb);
+        DBG("px: w=%d h=%d\n", gdk_pixbuf_get_width(pb), gdk_pixbuf_get_height(pb));
+        g_object_unref(pb);
+    } else 
+        image = gtk_image_new_from_stock(GTK_STOCK_MISSING_IMAGE, GTK_ICON_SIZE_BUTTON);
+    
+    gtk_container_add(GTK_CONTAINER(b), image);    
+    //set calbacks
+    gtk_misc_set_alignment(GTK_MISC(image), 0, 1);
+    g_object_set_data(G_OBJECT(image), "hicolor", (gpointer)hicolor);
+    gtk_misc_set_padding (GTK_MISC(image), 0, 0);
+    if (hicolor > 0) {
+        gtk_widget_add_events(b, GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK);
+        g_signal_connect_swapped (G_OBJECT (b), "enter-notify-event",
+              G_CALLBACK (fb_button_enter), image);
+        g_signal_connect_swapped (G_OBJECT (b), "leave-notify-event",
+              G_CALLBACK (fb_button_leave), image);
+    }
+
+    gtk_widget_show(image);
+    gtk_widget_show(b);
+    RET(b);
+}
+
 
 GtkWidget *
-fb_button_new_from_file(gchar *fname, int width, int height, gulong hicolor, gboolean keep_ratio)
+fb_button_new_from_file(gchar *fname, int width, int height, gulong hicolor,
+      gboolean keep_ratio)
 {
     GtkWidget *b, *image;
     
