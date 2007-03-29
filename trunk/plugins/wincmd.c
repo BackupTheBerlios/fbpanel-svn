@@ -165,7 +165,7 @@ static int
 wincmd_constructor(plugin *p)
 {
     line s;
-    gchar *tooltip, *fname;
+    gchar *tooltip, *fname, *iname;
     wincmd *wc;
     //GdkPixbuf *gp, *gps;
     GtkWidget *button;
@@ -177,7 +177,7 @@ wincmd_constructor(plugin *p)
     g_return_val_if_fail(wc != NULL, 0);
     wc->tips = gtk_tooltips_new();
     p->priv = wc;
-    tooltip = fname = 0;
+    tooltip = fname = iname = NULL;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
         if (s.type == LINE_NONE) {
             ERR( "wincmd: illegal token %s\n", s.str);
@@ -190,6 +190,8 @@ wincmd_constructor(plugin *p)
                 wc->button2 = str2num(wincmd_pair, s.t[1], WC_SHADE);
             else if (!g_ascii_strcasecmp(s.t[0], "tooltip"))
                 tooltip = g_strdup(s.t[1]);
+            else if (!g_ascii_strcasecmp(s.t[0], "icon"))
+                iname = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "image"))
                 fname = expand_tilda(s.t[1]); 
             else {
@@ -202,13 +204,13 @@ wincmd_constructor(plugin *p)
         }
     }
     if (p->panel->orientation == ORIENT_HORIZ) {
-        w = 10000;
+        w = -1;
         h = p->panel->ah;
     } else {
         w = p->panel->aw;
-        h = 10000;
+        h = -1;
     }
-    button = fb_button_new_from_file(fname, w, h, 0x202020, TRUE);
+    button = fb_button_new_from_icon_file(iname, fname, w, h, 0x202020, TRUE);
     gtk_container_set_border_width(GTK_CONTAINER(button), 0);
     g_signal_connect(G_OBJECT(button), "button_press_event",
           G_CALLBACK(clicked), (gpointer)wc);
@@ -219,6 +221,7 @@ wincmd_constructor(plugin *p)
         gtk_bgbox_set_background(button, BG_ROOT, p->panel->tintcolor, p->panel->alpha);
     
     g_free(fname);
+    g_free(iname);
     if (tooltip) {
         gtk_tooltips_set_tip(GTK_TOOLTIPS (wc->tips), button, tooltip, NULL);
         g_free(tooltip);
