@@ -895,8 +895,8 @@ fb_button_new_from_icon_file(gchar *iname, gchar *fname, int width, int height,
     GdkPixbuf *pb = NULL;
 
     ENTER;
-    DBG2("iname = %s\n", iname);
-    DBG2("fname = %s\n", fname);
+    DBG("iname = %s\n", iname);
+    DBG("fname = %s\n", fname);
     //make background window
     b = gtk_bgbox_new();
     gtk_container_set_border_width(GTK_CONTAINER(b), 0);
@@ -908,23 +908,23 @@ fb_button_new_from_icon_file(gchar *iname, gchar *fname, int width, int height,
               iname, MAX(width, height), 0);
         if (icon_info) {
             
-            DBG2("iname = %s file = %s size = %d\n", iname,
+            DBG("iname = %s file = %s size = %d\n", iname,
                   gtk_icon_info_get_filename(icon_info),
                   MAX(width, height));
             pb = gdk_pixbuf_new_from_file_at_size(gtk_icon_info_get_filename(icon_info), width, height, NULL);
             
             gtk_icon_info_free(icon_info);
         } else
-            DBG2("icon info failed\n");
+            DBG("icon info failed\n");
         
         
         //pb = gtk_icon_theme_load_icon (gtk_icon_theme_get_default(), iname, MAX(width, height), 0, NULL);
-        DBG2("%s\n", pb ? "from icon" : "");
+        DBG("%s\n", pb ? "from icon" : "");
     }
 
     if (fname && !pb) {
         pb = gdk_pixbuf_new_from_file_at_size(fname, width, height, NULL);
-        DBG2("%s\n", pb ? "from file" : "from stock");
+        DBG("%s\n", pb ? "from file" : "from stock");
     }
 
     if (pb) {
