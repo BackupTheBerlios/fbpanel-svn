@@ -117,7 +117,7 @@ my_button_pressed(GtkWidget *widget, GdkEventButton *event, GtkMenu *menu)
 
 
 static GtkWidget *
-make_button(plugin *p, gchar *fname, gchar *name, GtkWidget *menu)
+make_button(plugin *p, gchar *iname, gchar *fname, gchar *name, GtkWidget *menu)
 {
     int w, h;
     menup *m;
@@ -132,8 +132,8 @@ make_button(plugin *p, gchar *fname, gchar *name, GtkWidget *menu)
         w = p->panel->aw;
         h = 10000;
     }
-    m->bg = fb_button_new_from_file_with_label(fname, w, h, 0xFF0000, TRUE,
-          (p->panel->orientation == ORIENT_HORIZ ? name : NULL));
+    DBG("iname=%s\n", iname);
+    m->bg = fb_button_new_from_icon_file_with_label(iname, fname, w, h, 0xFF0000, TRUE, name);
     gtk_widget_show(m->bg);  
     gtk_box_pack_start(GTK_BOX(m->box), m->bg, FALSE, FALSE, 0);
     if (p->panel->transparent) 
@@ -146,20 +146,26 @@ make_button(plugin *p, gchar *fname, gchar *name, GtkWidget *menu)
    
     RET(m->bg);
 }
-   
+
+static FILE *
+mk_fdo_menu(gchar *cats)
+{
+    ENTER;
+    RET(NULL);
+}
 
 static GtkWidget *
 read_item(plugin *p)
 {
     line s;
-    gchar *name, *fname, *action;
+    gchar *name, *fname, *iname, *action;
     GtkWidget *item;
     menup *m = (menup *)p->priv;
     void (*cmd)(void);
     
     ENTER;
     s.len = 256;
-    name = fname = action = 0;
+    name = fname = action = iname = NULL;
     cmd = NULL;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
         if (s.type == LINE_VAR) {
@@ -167,6 +173,8 @@ read_item(plugin *p)
                 fname = expand_tilda(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "name"))
                 name = g_strdup(s.t[1]);
+            else if (!g_ascii_strcasecmp(s.t[0], "icon"))
+                iname = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "action"))
                 action = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "command")) {
@@ -189,13 +197,14 @@ read_item(plugin *p)
     gtk_container_set_border_width(GTK_CONTAINER(item), 0);
     if (name)
         g_free(name);
-    if (fname) {
+    if (fname || iname) {
         GtkWidget *img;
         
-        img = gtk_image_new_from_file_scaled(fname, m->iconsize, m->iconsize, TRUE);
+        img = fb_image_new_from_icon_file(iname, fname, m->iconsize, m->iconsize, TRUE);
         gtk_widget_show(img);
         gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
         g_free(fname);
+        g_free(iname);
     }
     if (cmd) {
         g_signal_connect(G_OBJECT(item), "activate", (GCallback)run_command, cmd);
@@ -228,32 +237,36 @@ read_separator(plugin *p)
 static void
 read_include(plugin *p)
 {
-    gchar *name;
+    gchar *name, *category;
     line s;
     menup *m = (menup *)p->priv;
-    FILE *fp;
+    FILE *fp = NULL;
     
     ENTER;
     s.len = 256;
-    name = NULL;
+    name = category = NULL;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
+        if (fp)
+            continue;
         if (s.type == LINE_VAR) {
-            if (!g_ascii_strcasecmp(s.t[0], "name")) 
+            if (!g_ascii_strcasecmp(s.t[0], "name")) {
                 name = expand_tilda(s.t[1]);
-            else  {
+                fp = fopen(name, "r");
+                g_free(name);   
+            } else if (!g_ascii_strcasecmp(s.t[0], "category")) {
+                fp = mk_fdo_menu(s.t[1]);
+            } else {
                 ERR( "menu/include: unknown var %s\n", s.t[0]);
                 RET();
             }
         }
     }
-    if ((fp = fopen(name, "r"))) {
-        LOG(LOG_INFO, "Including %s\n", name);
+    if (fp) {
         m->files = g_slist_prepend(m->files, p->fp);
         p->fp = fp;
     } else {
         ERR("Can't include %s\n", name);
     }
-    if (name) g_free(name);    
     RET();
 }
 
@@ -262,7 +275,7 @@ read_submenu(plugin *p, gboolean as_item)
 {
     line s;
     GtkWidget *mi, *menu;
-    gchar name[256], *fname;
+    gchar name[256], *fname, *iname;
     menup *m = (menup *)p->priv;
 
     
@@ -271,8 +284,9 @@ read_submenu(plugin *p, gboolean as_item)
     menu = gtk_menu_new ();
     gtk_container_set_border_width(GTK_CONTAINER(menu), 0);
   
-    fname = 0;
+    iname = fname = NULL;
     name[0] = 0;
+    DBG("here\n");
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {       
         if (s.type == LINE_BLOCK_START) {
             mi = NULL;
@@ -296,14 +310,19 @@ read_submenu(plugin *p, gboolean as_item)
             gtk_widget_show(mi);
             gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
         } else if (s.type == LINE_VAR) {
+            DBG("here\n");
             if (!g_ascii_strcasecmp(s.t[0], "image")) 
                 fname = expand_tilda(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "name"))
                 strcpy(name, s.t[1]);
-            else {
+            else if (!g_ascii_strcasecmp(s.t[0], "icon")) {
+                iname = g_strdup(s.t[1]);
+                DBG("icon\n");
+            } else {
                 ERR("menu: unknown var %s\n", s.t[0]);
                 goto error;
             }
+            DBG("here\n");
         } else if (s.type == LINE_NONE) {
             if (m->files) {
                 fclose(p->fp);
@@ -315,6 +334,7 @@ read_submenu(plugin *p, gboolean as_item)
             goto error;
         }
     }
+    DBG("here\n");
     if (as_item) {
         mi = gtk_image_menu_item_new_with_label(name ? name : "");
         if (fname) {
@@ -327,7 +347,7 @@ read_submenu(plugin *p, gboolean as_item)
         gtk_menu_item_set_submenu (GTK_MENU_ITEM (mi), menu);
         RET(mi);
     } else {
-        mi = make_button(p, fname, name, menu);
+        mi = make_button(p, iname, fname, name, menu);
         if (fname)
             g_free(fname);
         RET(mi);
