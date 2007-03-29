@@ -241,6 +241,16 @@ panel_size_alloc(GtkWidget *widget, GtkAllocation *a, panel *p)
     RET(TRUE);
 }
 
+static void
+panel_style_set(GtkWidget *widget, GtkStyle  *previous_style, panel *p)
+{
+    ENTER;
+    if (GTK_WIDGET_REALIZED(widget)) {
+        DBG("realized\n");
+        gtk_main_quit();
+    }
+    RET();
+}
 
 static  gboolean
 panel_configure_event (GtkWidget *widget, GdkEventConfigure *e, panel *p)
@@ -341,7 +351,9 @@ panel_start_gui(panel *p)
           (GCallback) panel_configure_event, p);
     g_signal_connect (G_OBJECT (p->topgwin), "realize",
           (GCallback) panel_realize, p);
-     
+    g_signal_connect (G_OBJECT (p->topgwin), "style-set",
+          (GCallback) panel_style_set, p);
+    
     gtk_widget_realize(p->topgwin);
     //gdk_window_set_decorations(p->topgwin->window, 0);
     gtk_widget_set_app_paintable(p->topgwin, TRUE);
