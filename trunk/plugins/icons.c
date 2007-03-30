@@ -357,7 +357,7 @@ read_application(plugin *p)
     }
     if (!(fname || iname))
         goto error;
-    gp = fb_pixbuf_new_from_icon_file(iname, fname, -1, -1);  
+    gp = fb_pixbuf_new_from_icon_file(iname, fname, 48, 48);  
     if (gp) {
         if ((data = pixbuf2argb(gp, &size))) {
             wp = g_new0 (wmpix_t, 1);
