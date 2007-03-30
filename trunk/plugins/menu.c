@@ -37,7 +37,7 @@ typedef struct {
 static cat_info main_cats[] = {
     { "AudioVideo", "gnome-multimedia" },
     { "Development","gnome-devel" },
-    { "Education",  "gnome-amusements" },
+    { "Education",  "gnome-applications" },
     { "Game",       "gnome-joystick" },
     { "Graphics",   "gnome-graphics" },
     { "Network",    "gnome-globe" },

@@ -805,6 +805,9 @@ main(int argc, char *argv[], char *env[])
             exit(1);
         }
     }
+
+    gtk_icon_theme_append_search_path(gtk_icon_theme_get_default(),
+	IMGPREFIX);       
     signal(SIGUSR1, sig_usr);
     do {
         if (!(pfp = open_profile(cprofile)))
