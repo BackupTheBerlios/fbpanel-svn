@@ -3,6 +3,7 @@
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include "panel.h"
 #include "misc.h"
@@ -23,6 +24,28 @@
  */
 
 
+static const char desktop_ent[] = "Desktop Entry";
+static const gchar app_dir_name[] = "applications";
+static GHashTable *ht;
+
+typedef struct {
+    gchar *name;
+    gchar *icon;
+    GtkWidget *menu;
+} cat_info;
+
+static cat_info main_cats[] = {
+    { "AudioVideo", "gnome-multimedia" },
+    { "Development","gnome-devel" },
+    { "Education",  "gnome-amusements" },
+    { "Game",       "gnome-joystick" },
+    { "Graphics",   "gnome-graphics" },
+    { "Network",    "gnome-globe" },
+    { "Office",     "gnome-applications" },
+    { "Settings",   "gnome-settings" },
+    { "System",     "gnome-system" },
+    { "Utility",    "gnome-util" },
+};
 typedef struct {
     GtkTooltips *tips;
     GtkWidget *menu, *box, *bg, *label;
@@ -38,8 +61,11 @@ menu_destructor(plugin *p)
 
     ENTER;
     g_signal_handler_disconnect(G_OBJECT(m->bg), m->handler_id);
+    DBG("here\n");
     gtk_widget_destroy(m->menu);
+    DBG("here\n");
     gtk_widget_destroy(m->box);
+    DBG("here\n");
     g_free(m);
     RET();
 }
@@ -56,6 +82,128 @@ spawn_app(GtkWidget *widget, gpointer data)
             g_error_free (error);
         }
     }
+    RET();
+}
+
+
+static void
+do_app_dir(plugin *p, const gchar *path)
+{
+    GDir* dir;
+    const gchar* name;
+    gchar *cwd, **cats, **tmp, *exec, *title, *icon, *dot;
+    GKeyFile*  file;
+
+    ENTER;
+    DBG("path: %s\n", path);
+    dir = g_dir_open(path, 0, NULL);
+    if (!dir)
+        RET();
+    cwd = g_get_current_dir();
+    g_chdir(path);
+    file = g_key_file_new();
+    while ((name = g_dir_read_name(dir))) {
+        DBG("name: %s\n", name);
+        if (g_file_test(name, G_FILE_TEST_IS_DIR)) {
+            do_app_dir(p, name);
+            continue;
+        }
+        if (!g_str_has_suffix(name, ".desktop"))
+            continue;
+        if (!g_key_file_load_from_file(file, name, 0, NULL))
+            continue;
+        if (g_key_file_get_boolean(file, desktop_ent, "NoDisplay", NULL))
+            continue;
+        if (g_key_file_has_key(file, desktop_ent, "OnlyShowIn", NULL))
+            continue;
+        if (!(cats = g_key_file_get_string_list(file, desktop_ent, "Categories", NULL, NULL)))
+            continue;
+        if (!(exec = g_key_file_get_string(file, desktop_ent, "Exec", NULL)))
+            continue;
+        while ((dot = strchr(exec, '%'))) {
+            if (dot[1] != '\0')
+                dot[0] = dot[1] = ' ';
+        }
+        DBG("exec: %s\n", exec);
+        title = g_key_file_get_locale_string(file, desktop_ent, "Name", NULL, NULL);
+        DBG("title: %s\n", title);
+        icon = g_key_file_get_string(file, desktop_ent, "Icon", NULL);
+        if (icon) {
+            dot = strchr( icon, '.' );
+            if(icon[0] !='/' && dot )
+                *dot = '\0';
+        }
+
+        DBG("icon: %s\n", icon);
+        for (tmp = cats; *tmp; tmp++) {
+            GtkWidget **menu, *mi;
+            
+            DBG("cat: %s\n", *tmp);
+            if (!(menu = g_hash_table_lookup(ht, tmp[0])))
+                continue;
+
+            mi = gtk_image_menu_item_new_with_label(title ? title : exec);
+            gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(mi),
+                  fb_image_new_from_icon_file(icon, icon, 20, 20, TRUE));
+            g_signal_connect(G_OBJECT(mi), "activate", (GCallback)spawn_app, exec);
+            //g_object_set_data_full(G_OBJECT(mi), "activate", exec, g_free);
+            if (!(*menu))
+                *menu = gtk_menu_new();
+            gtk_menu_shell_append(GTK_MENU_SHELL(*menu), mi);
+            gtk_widget_show_all(mi);
+            DBG("added =======================================\n");
+        }
+        g_free(icon);
+        g_free(title);
+        //g_free(exec);
+    }
+    g_chdir(cwd);
+    g_free(cwd);
+    RET();
+}
+
+
+void
+make_fdo_menu(plugin *p, GtkWidget *menu)
+{
+    const char** sys_dirs = (const char**)g_get_system_data_dirs();
+    int i;
+    gchar *path;
+    menup *m = (menup *)p->priv;
+    
+    ENTER;
+    ht = g_hash_table_new(g_str_hash, g_str_equal);
+    for (i = 0; i < G_N_ELEMENTS(main_cats); i++) {
+        g_hash_table_insert(ht, main_cats[i].name, &main_cats[i].menu);
+        main_cats[i].menu = NULL;
+        if (g_hash_table_lookup(ht, &main_cats[i].name))
+            DBG("%s not found\n", main_cats[i].name);
+    }
+    
+    for (i = 0; i < g_strv_length((gchar **)sys_dirs); ++i)    {
+        path = g_build_filename(sys_dirs[i], app_dir_name, NULL );
+        do_app_dir(p, path);
+        g_free(path);
+    }
+    path = g_build_filename(g_get_user_data_dir(), app_dir_name, NULL);
+    do_app_dir(p, path);
+    g_free(path);
+    //build menu
+    for (i = 0; i < G_N_ELEMENTS(main_cats); i++) {
+        GtkWidget *mi, *img;
+    
+        if (main_cats[i].menu) {
+            mi = gtk_image_menu_item_new_with_label(main_cats[i].name);
+            img = fb_image_new_from_icon_file(main_cats[i].icon, NULL, m->iconsize, m->iconsize, TRUE);
+            gtk_widget_show(img);
+            gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(mi), img);
+            gtk_menu_item_set_submenu (GTK_MENU_ITEM (mi), main_cats[i].menu);
+            gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
+            gtk_widget_show_all(mi);
+            gtk_widget_show_all(main_cats[i].menu);
+        }
+    }
+    g_hash_table_destroy(ht);
     RET();
 }
 
@@ -147,27 +295,6 @@ make_button(plugin *p, gchar *iname, gchar *fname, gchar *name, GtkWidget *menu)
     RET(m->bg);
 }
 
-static FILE *
-mk_fdo_menu(gchar *cats)
-{
-    const char** sys_dirs = (const char**)g_get_system_data_dirs();
-    
-    ENTER;
-
-#if 0
-    for (i = 0; i < g_strv_length(sys_dirs); ++i)    {
-        path = g_build_filename( sys_dirs[i], app_dir_name, NULL );
-        if( stat( path, &dir_stat) == 0 )
-        {
-            times[i] = dir_stat.st_mtime;
-            func( path, user_data );
-        }
-        g_free( path );
-    }
-#endif
-    RET(NULL);
-}
-
 static GtkWidget *
 read_item(plugin *p)
 {
@@ -224,6 +351,7 @@ read_item(plugin *p)
         g_signal_connect(G_OBJECT(item), "activate", (GCallback)run_command, cmd);
     } else if (action) {
         g_signal_connect(G_OBJECT(item), "activate", (GCallback)spawn_app, action);
+        g_object_set_data_full(G_OBJECT(item), "activate", action, g_free);
     }
     RET(item);
 
@@ -248,38 +376,47 @@ read_separator(plugin *p)
     RET(gtk_separator_menu_item_new());
 }
 
+
+static void
+read_system_menu(plugin *p, GtkWidget *menu)
+{
+    line s;
+    
+    ENTER;
+    s.len = 256;
+    while (get_line(p->fp, &s) != LINE_BLOCK_END) ;
+    make_fdo_menu(p, menu);
+    RET();
+}
+
 static void
 read_include(plugin *p)
 {
-    gchar *name, *category;
+    gchar *name;
     line s;
     menup *m = (menup *)p->priv;
     FILE *fp = NULL;
     
     ENTER;
     s.len = 256;
-    name = category = NULL;
+    name = NULL;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
-        if (fp)
-            continue;
         if (s.type == LINE_VAR) {
             if (!g_ascii_strcasecmp(s.t[0], "name")) {
+                g_free(name);
                 name = expand_tilda(s.t[1]);
-                fp = fopen(name, "r");
-                g_free(name);   
-            } else if (!g_ascii_strcasecmp(s.t[0], "category")) {
-                fp = mk_fdo_menu(s.t[1]);
             } else {
                 ERR( "menu/include: unknown var %s\n", s.t[0]);
-                RET();
             }
         }
     }
+    fp = fopen(name, "r");
+    g_free(name);
     if (fp) {
         m->files = g_slist_prepend(m->files, p->fp);
         p->fp = fp;
     } else {
-        ERR("Can't include %s\n", name);
+        ERR("Can't include '%s'\n", name);
     }
     RET();
 }
@@ -310,6 +447,9 @@ read_submenu(plugin *p, gboolean as_item)
                 mi = read_separator(p);
             } else if (!g_ascii_strcasecmp(s.t[0], "menu")) {
                 mi = read_submenu(p, TRUE);
+            } else if (!g_ascii_strcasecmp(s.t[0], "systemmenu")) {
+                read_system_menu(p, menu);
+                continue;
             } else if (!g_ascii_strcasecmp(s.t[0], "include")) {
                 read_include(p);
                 continue;

@@ -8,9 +8,8 @@ bugs.
         Urgency hint implementation
         Raise window when drag target is over its name in taskbar
         Building menu from *.desktop files
-        i18n support
-	Joe MacDonald  <joeythesaint at users.sourceforge.net>
-	Jens Georg     <phako at users.sourceforge.net>
+    Joe MacDonald  <joeythesaint at users.sourceforge.net>
+    Jens Georg     <phako at users.sourceforge.net>
 	and others
 	
 Credits and lot of thanks to Peter Zelezny <zed@linuxpower.org>
