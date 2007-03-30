@@ -150,7 +150,21 @@ make_button(plugin *p, gchar *iname, gchar *fname, gchar *name, GtkWidget *menu)
 static FILE *
 mk_fdo_menu(gchar *cats)
 {
+    const char** sys_dirs = (const char**)g_get_system_data_dirs();
+    
     ENTER;
+
+#if 0
+    for (i = 0; i < g_strv_length(sys_dirs); ++i)    {
+        path = g_build_filename( sys_dirs[i], app_dir_name, NULL );
+        if( stat( path, &dir_stat) == 0 )
+        {
+            times[i] = dir_stat.st_mtime;
+            func( path, user_data );
+        }
+        g_free( path );
+    }
+#endif
     RET(NULL);
 }
 
