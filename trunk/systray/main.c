@@ -120,11 +120,11 @@ tray_constructor(plugin *p)
     gtk_container_set_border_width(GTK_CONTAINER(frame), 0);
     gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
 #endif
-    tr->box = p->panel->my_box_new(FALSE, 0);
+    tr->box = p->panel->my_box_new(FALSE, 1);
     //gtk_container_add(GTK_CONTAINER(frame), tr->box);
     gtk_container_add(GTK_CONTAINER(p->pwid), tr->box);        
-    //gtk_bgbox_set_background(p->pwid, BG_STYLE, 0, 0);
-    gtk_container_set_border_width(GTK_CONTAINER(p->pwid), 0);
+    gtk_bgbox_set_background(p->pwid, BG_STYLE, 0, 0);
+    gtk_container_set_border_width(GTK_CONTAINER(p->pwid), 1);
     screen = gtk_widget_get_screen (GTK_WIDGET (p->panel->topgwin));
     
     if (egg_tray_manager_check_running(screen)) {
