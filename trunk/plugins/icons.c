@@ -324,14 +324,14 @@ read_application(plugin *p)
     icons *ics = (icons *)p->priv;
     GdkPixbuf *gp = NULL;
     line s;
-    gchar *fname, *appname, *classname;
+    gchar *fname, *iname, *appname, *classname;
     wmpix_t *wp = NULL;
     gulong *data;
     int size;
     
     ENTER;
     s.len = 256;
-    fname = appname = classname = NULL;
+    iname = fname = appname = classname = NULL;
     while (get_line(p->fp, &s) != LINE_BLOCK_END) {
         if (s.type == LINE_NONE) {
             ERR( "icons: illegal token %s\n", s.str);
@@ -340,6 +340,8 @@ read_application(plugin *p)
         if (s.type == LINE_VAR) {
             if (!g_ascii_strcasecmp(s.t[0], "image")) 
                 fname = expand_tilda(s.t[1]);
+            else if (!g_ascii_strcasecmp(s.t[0], "icon"))
+                iname = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "appname"))
                 appname = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "classname"))
@@ -353,9 +355,9 @@ read_application(plugin *p)
             goto error;
         }
     }
-    if (!fname)
-        RET(0);
-    gp = gdk_pixbuf_new_from_file(fname, NULL);  
+    if (!(fname || iname))
+        goto error;
+    gp = fb_pixbuf_new_from_icon_file(iname, fname, -1, -1);  
     if (gp) {
         if ((data = pixbuf2argb(gp, &size))) {
             wp = g_new0 (wmpix_t, 1);
