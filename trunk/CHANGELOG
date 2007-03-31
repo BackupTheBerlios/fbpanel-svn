@@ -1,3 +1,9 @@
+4.7
+New Feature
+* Build application menu from *.desktop files 
+* Using themed icons. Change icon theme and see fbpanel updates itself
+* default config files were updates to use new functionality
+
 4.6
 New Features
 * [ 1295234 ] Detect Window "Urgency".
