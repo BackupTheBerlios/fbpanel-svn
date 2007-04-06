@@ -60,7 +60,7 @@ enum {
     EV_ACTIVE_WINDOW,
     EV_CLIENT_LIST_STACKING,
     EV_CLIENT_LIST,
-    LAST_SIGNAL
+    EV_LAST_SIGNAL
 };
 
 GType fb_ev_get_type       (void);
