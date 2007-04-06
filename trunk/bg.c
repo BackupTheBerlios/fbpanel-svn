@@ -32,6 +32,7 @@
 #include <X11/Xatom.h>
 
 #include "bg.h"
+#include "panel.h"
 
 //#define DEBUG
 #include "dbg.h"
@@ -61,9 +62,9 @@ struct _FbBg {
 static void fb_bg_class_init (FbBgClass *klass);
 static void fb_bg_init (FbBg *monitor);
 static void fb_bg_finalize (GObject *object);
-static Pixmap fb_bg_get_xrootpmap(FbBg *monitor);
 static void fb_bg_changed(FbBg *monitor);
-
+static Pixmap fb_bg_get_xrootpmap_real(FbBg *bg);
+static GdkFilterReturn fb_bg_event_filter(GdkXEvent *xevent, GdkEvent *event, FbBg *bg);
 
 static guint signals [LAST_SIGNAL] = { 0 };
 
@@ -124,7 +125,7 @@ fb_bg_init (FbBg *bg)
     bg->dpy = GDK_DISPLAY();
     bg->xroot = DefaultRootWindow(bg->dpy);
     bg->id = XInternAtom(bg->dpy, "_XROOTPMAP_ID", False);
-    bg->pixmap = fb_bg_get_xrootpmap(bg);
+    bg->pixmap = fb_bg_get_xrootpmap_real(bg);
     gcv.ts_x_origin = 0;
     gcv.ts_y_origin = 0;
     gcv.fill_style = FillTiled;
@@ -134,6 +135,8 @@ fb_bg_init (FbBg *bg)
         mask |= GCTile ;
     }
     bg->gc = XCreateGC (bg->dpy, bg->xroot, mask, &gcv) ;
+    gdk_window_add_filter(gdk_get_default_root_window (),
+          (GdkFilterFunc)fb_bg_event_filter, bg);
     RET();
 }
 
@@ -153,12 +156,20 @@ fb_bg_finalize (GObject *object)
     ENTER;
     bg = FB_BG (object);
     XFreeGC(bg->dpy, bg->gc);
+    gdk_window_remove_filter(gdk_get_default_root_window (),
+          (GdkFilterFunc)fb_bg_event_filter, bg);
     RET();
 }
 
+Pixmap
+fb_bg_get_xrootpmap(FbBg *bg)
+{
+    ENTER;
+    RET(bg->pixmap);
+}
 
 static Pixmap
-fb_bg_get_xrootpmap(FbBg *bg)
+fb_bg_get_xrootpmap_real(FbBg *bg)
 {
     Pixmap ret = None;
 
@@ -176,9 +187,9 @@ fb_bg_get_xrootpmap(FbBg *bg)
                       &nitems, &bytes_after, &prop) == Success) {
                 if (ret_type == XA_PIXMAP) {
                     ret = *((Pixmap *)prop);
-                    XFree(prop);
-                    break;
+                    c = -c ; //to quit loop
                 }
+                XFree(prop);           
             }
         } while (--c > 0);
     }
@@ -186,6 +197,27 @@ fb_bg_get_xrootpmap(FbBg *bg)
 
 }
 
+
+
+GdkPixmap *
+fb_bg_get_xroot_pix_for_area(FbBg *bg, gint x, gint y, gint width, gint height, gint depth)
+{
+    GdkPixmap *gbgpix;
+    Pixmap bgpix;
+    
+    ENTER;
+    if (bg->pixmap == None)
+        RET(NULL);
+    gbgpix = gdk_pixmap_new(NULL, width, height, depth);
+    if (!gbgpix) {
+        ERR("gdk_pixmap_new failed\n");
+        RET(NULL);
+    }
+    bgpix =  gdk_x11_drawable_get_xid(gbgpix);
+    XSetTSOrigin(bg->dpy, bg->gc, -x, -y) ;
+    XFillRectangle(bg->dpy, bgpix, bg->gc, 0, 0, width, height);
+    RET(gbgpix);
+}
 
 GdkPixmap *
 fb_bg_get_xroot_pix_for_win(FbBg *bg, GtkWidget *widget)
@@ -198,6 +230,8 @@ fb_bg_get_xroot_pix_for_win(FbBg *bg, GtkWidget *widget)
     int  x, y;
 
     ENTER;
+    if (bg->pixmap == None)
+        RET(NULL);
     win =  GDK_WINDOW_XWINDOW(widget->window); 
     if (!XGetGeometry(bg->dpy, win, &dummy, &x, &y, &width, &height, &border,
               &depth)) {
@@ -205,7 +239,7 @@ fb_bg_get_xroot_pix_for_win(FbBg *bg, GtkWidget *widget)
         RET(NULL);
     }
     XTranslateCoordinates(bg->dpy, win, bg->xroot, 0, 0, &x, &y, &dummy);
-    DBG("win=%x %dx%d%+d%+d\n", win, width, height, x, y);
+    DBG("win=%lxx %dx%d%+d%+d\n", win, width, height, x, y);
     gbgpix = gdk_pixmap_new(NULL, width, height, depth);
     if (!gbgpix) {
         ERR("gdk_pixmap_new failed\n");
@@ -253,7 +287,7 @@ static void
 fb_bg_changed(FbBg *bg)
 {
     ENTER;
-    bg->pixmap = fb_bg_get_xrootpmap(bg);
+    bg->pixmap = fb_bg_get_xrootpmap_real(bg);
     if (bg->pixmap != None) {
         XGCValues  gcv;
         
@@ -280,4 +314,19 @@ FbBg *fb_bg_get_for_display(void)
     else
         g_object_ref(default_bg);
     RET(default_bg);
+}
+
+static GdkFilterReturn
+fb_bg_event_filter(GdkXEvent *xevent, GdkEvent *event, FbBg *bg)
+{
+    XEvent *ev = (XEvent *) xevent;
+
+    ENTER;
+    DBG("win = 0x%lx\n", ev->xproperty.window);
+    if (ev->type != PropertyNotify || ev->xproperty.window != GDK_ROOT_WINDOW()
+          || ev->xproperty.atom != a_XROOTPMAP_ID) 
+        RET(GDK_FILTER_CONTINUE);
+    
+    fb_bg_notify_changed_bg(bg);
+    RET(GDK_FILTER_REMOVE);
 }

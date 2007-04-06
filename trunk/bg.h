@@ -35,6 +35,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gtk/gtk.h>
+#include <X11/Xlib.h>
 
 #define FB_TYPE_BG         (fb_bg_get_type ())
 #define FB_BG(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o),      \
@@ -58,6 +59,9 @@ GType fb_bg_get_type       (void);
 FbBg *fb_bg_new(void);
 void fb_bg_composite(GdkDrawable *base, GdkGC *gc, guint32 tintcolor, gint alpha);
 GdkPixmap *fb_bg_get_xroot_pix_for_win(FbBg *bg, GtkWidget *widget);
+GdkPixmap *fb_bg_get_xroot_pix_for_area(FbBg *bg,gint x, gint y,
+      gint width, gint height, gint depth);
+Pixmap fb_bg_get_xrootpmap(FbBg *bg);
 void fb_bg_notify_changed_bg(FbBg *bg);
 FbBg *fb_bg_get_for_display(void);
 #endif /* __FB_BG_H__ */

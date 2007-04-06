@@ -62,7 +62,9 @@ typedef struct _pager  pager;
 #define MAX_DESK_NUM   20
 /* map of a desktop */
 struct _desk {
-    GtkWidget *da;
+    GtkWidget *da, *box;
+    Pixmap xpix;
+    GdkPixmap *gpix;
     GdkPixmap *pix;
     int no, dirty, first;
     gfloat scalew, scaleh;
@@ -74,12 +76,13 @@ struct _pager {
     desk *desks[MAX_DESK_NUM];
     guint desknum;
     guint curdesk;
-    int dw, dh;
-    gfloat scalex, scaley, ratio;
+    //int dw, dh;
+    gfloat /*scalex, scaley, */ratio;
     Window *wins;
     int winnum, dirty;
     GHashTable* htable;
     task *focusedtask;
+    FbBg *fbbg;
 };
 
 
@@ -90,10 +93,12 @@ struct _pager {
 //if (t->nws.skip_pager || t->nwwt.desktop /*|| t->nwwt.dock || t->nwwt.splash*/ )
    
 static void pager_rebuild_all(FbEv *ev, pager *pg);
+static void desk_draw_bg(pager *pg, desk *d1);
 
 static inline void desk_set_dirty_by_win(pager *p, task *t);
 static inline void desk_set_dirty(desk *d);
 static inline void desk_set_dirty_all(pager *pg);
+
 /*
 static void desk_clear_pixmap(desk *d);
 static gboolean task_remove_stale(Window *win, task *t, pager *p);
@@ -116,7 +121,7 @@ task_remove_stale(Window *win, task *t, pager *p)
         desk_set_dirty_by_win(p, t);
         if (p->focusedtask == t)
             p->focusedtask = NULL;
-        DBG("del %x\n", t->win);
+        DBG("del %lx\n", t->win);
         g_free(t);
         return TRUE;
     }
@@ -156,7 +161,7 @@ task_get_sizepos(task *t)
         t->y = ry;
         t->w = win_attributes.width;
         t->h = win_attributes.height;
-        DBG("win=0x%x WxH=%dx%d\n", t->win,t->w, t->h);
+        DBG("win=0x%lx WxH=%dx%d\n", t->win,t->w, t->h);
     }
     RET();
 }
@@ -214,15 +219,82 @@ desk_clear_pixmap(desk *d)
     if (!d->pix)
         RET();
     widget = GTK_WIDGET(d->da);
-    gdk_draw_rectangle (d->pix,
-          ((d->no == d->pg->curdesk) ? 
-                widget->style->dark_gc[GTK_STATE_SELECTED] :
-                widget->style->dark_gc[GTK_STATE_NORMAL]),
-          TRUE, 
-          0, 0,
-          widget->allocation.width,
-          widget->allocation.height);
+    if (d->xpix != None) {
+    	gdk_draw_drawable (d->pix, 
+              widget->style->dark_gc[GTK_STATE_NORMAL], 
+              d->gpix, 
+              0, 0, 0, 0,
+              widget->allocation.width,
+              widget->allocation.height);      
+    } else {
+        gdk_draw_rectangle (d->pix,
+              ((d->no == d->pg->curdesk) ? 
+                    widget->style->dark_gc[GTK_STATE_SELECTED] :
+                    widget->style->dark_gc[GTK_STATE_NORMAL]),
+              TRUE, 
+              0, 0,
+              widget->allocation.width,
+              widget->allocation.height);
+    }
     
+    RET();
+}
+
+
+static void
+desk_draw_bg(pager *pg, desk *d1)
+{
+    Pixmap xpix;
+    GdkPixmap *gpix; 
+    GdkPixbuf *p1, *p2;
+    gint width, height, depth;
+    FbBg *bg = pg->fbbg;
+    GtkWidget *widget = d1->da;
+    
+    ENTER;
+    xpix = fb_bg_get_xrootpmap(bg);
+    d1->xpix = None;
+    width = widget->allocation.width;
+    height = widget->allocation.height;
+    DBG("w %d h %d\n", width, height);
+    if (width < 3 || height < 3)
+        RET();
+    
+    // create new pix
+    xpix = fb_bg_get_xrootpmap(bg);
+    if (xpix == None)
+        RET();
+    depth = gdk_drawable_get_depth(widget->window);
+    gpix = fb_bg_get_xroot_pix_for_area(bg, 0, 0, gdk_screen_width(), gdk_screen_height(), depth);
+    if (!gpix) {
+        ERR("fb_bg_get_xroot_pix_for_area failed\n");
+        RET();
+    }
+    p1 = gdk_pixbuf_get_from_drawable(NULL, gpix, NULL, 0, 0, 0, 0,
+          gdk_screen_width(), gdk_screen_height());
+    if (!p1) {
+        ERR("gdk_pixbuf_get_from_drawable failed\n");
+        goto err_gpix;
+    }
+    p2 = gdk_pixbuf_scale_simple(p1, width, height,
+          //GDK_INTERP_NEAREST
+          //GDK_INTERP_TILES
+          //GDK_INTERP_BILINEAR
+          GDK_INTERP_HYPER
+        );
+    if (!p2) {
+        ERR("gdk_pixbuf_scale_simple failed\n");
+        goto err_p1;
+    }
+    gdk_draw_pixbuf(d1->gpix, widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+          p2, 0, 0, 0, 0, width, height,  GDK_RGB_DITHER_NONE, 0, 0);
+
+    d1->xpix = xpix;
+    g_object_unref(p2);
+ err_p1:
+    g_object_unref(p1);
+ err_gpix:
+    g_object_unref(gpix);
     RET();
 }
 
@@ -289,31 +361,33 @@ desk_expose_event (GtkWidget *widget, GdkEventExpose *event, desk *d)
     RET(FALSE);
 }
 
+
 /* Upon realize and every resize creates a new backing pixmap of the appropriate size */
 static gint
 desk_configure_event (GtkWidget *widget, GdkEventConfigure *event, desk *d)
 {
     int w, h;
+    
     ENTER;
-    DBG("d->no=%d %dx%d\n", d->no, widget->allocation.width, widget->allocation.height);
+    w = widget->allocation.width;
+    h = widget->allocation.height;
+    
+    DBG("d->no=%d %dx%d\n", d->no, w, h);
     if (d->pix)
         g_object_unref(d->pix);
-    
-    d->pix = gdk_pixmap_new(widget->window,
-          widget->allocation.width,
-          widget->allocation.height,
-          -1);    
-
-    d->scalew = (gfloat)widget->allocation.height / (gfloat)gdk_screen_height();
-    d->scaleh = (gfloat)widget->allocation.width  / (gfloat)gdk_screen_width();
+    if (d->gpix)
+        g_object_unref(d->gpix);
+    d->pix = gdk_pixmap_new(widget->window, w, h, -1);
+    d->gpix = gdk_pixmap_new(widget->window, w, h, -1);
+    desk_draw_bg(d->pg, d);
+    d->scalew = (gfloat)h / (gfloat)gdk_screen_height();
+    d->scaleh = (gfloat)w / (gfloat)gdk_screen_width();
     desk_set_dirty(d);
 
     //request best size
     if (p->orientation != ORIENT_HORIZ) {
-        w = widget->allocation.width;
         h = (gfloat) w / d->pg->ratio;
     } else {
-        h = widget->allocation.height;
         w = (gfloat) h * d->pg->ratio;
     }
     DBG("requesting %dx%d\n", w, h);
@@ -378,8 +452,11 @@ desk_new(pager *pg, int i)
     d->no = i;
     
     d->da = gtk_drawing_area_new();
-    //gtk_widget_set_size_request(GTK_WIDGET(d->da), 10, 10);
-    gtk_box_pack_start(GTK_BOX(pg->box), d->da, TRUE, TRUE, 0);
+    d->box = gtk_hbox_new(FALSE, 0);
+    gtk_container_set_border_width (GTK_CONTAINER (d->box), 1);
+    gtk_box_pack_start(GTK_BOX(d->box), d->da, TRUE, TRUE, 0);
+    
+    gtk_box_pack_start(GTK_BOX(pg->box), d->box, TRUE, TRUE, 0);
     gtk_widget_add_events (d->da, GDK_EXPOSURE_MASK
           | GDK_BUTTON_PRESS_MASK
           | GDK_BUTTON_RELEASE_MASK);
@@ -429,7 +506,7 @@ do_net_active_window(FbEv *ev, pager *p)
 
     ENTER;
     fwin = get_xaproperty(GDK_ROOT_WINDOW(), a_NET_ACTIVE_WINDOW, XA_WINDOW, 0);
-    DBG("win=%x\n", fwin ? *fwin : 0);
+    DBG("win=%lx\n", fwin ? *fwin : 0);
     if (fwin) {
         t = g_hash_table_lookup(p->htable, fwin);
         if (t != p->focusedtask) {
@@ -454,10 +531,12 @@ do_net_current_desktop(FbEv *ev, pager *p)
 {
     ENTER;
     desk_set_dirty(p->desks[p->curdesk]);
+    gtk_widget_set_state(p->desks[p->curdesk]->box, GTK_STATE_NORMAL);
     p->curdesk =  get_net_current_desktop ();
     if (p->curdesk >= p->desknum)
         p->curdesk = 0;
     desk_set_dirty(p->desks[p->curdesk]);
+    gtk_widget_set_state(p->desks[p->curdesk]->box, GTK_STATE_PRELIGHT);
     RET();
 }
 
@@ -496,7 +575,7 @@ do_net_client_list_stacking(FbEv *ev, pager *p)
             if (!FBPANEL_WIN(t->win))
                 XSelectInput (GDK_DISPLAY(), t->win, PropertyChangeMask | StructureNotifyMask);
             g_hash_table_insert(p->htable, &t->win, t);
-            DBG("add %x\n", t->win);
+            DBG("add %lx\n", t->win);
             desk_set_dirty_by_win(p, t);
         }
     }
@@ -534,7 +613,7 @@ pager_configurenotify(pager *p, XEvent *ev)
  
     if (!(t = g_hash_table_lookup(p->htable, &win))) 
         RET();
-    DBG("win=0x%x\n", win);
+    DBG("win=0x%lx\n", win);
     task_get_sizepos(t);
     desk_set_dirty_by_win(p, t);
     RET();
@@ -552,7 +631,7 @@ pager_propertynotify(pager *p, XEvent *ev)
     if ((win == GDK_ROOT_WINDOW()) || !(t = g_hash_table_lookup(p->htable, &win)))
         RET();
       
-    DBG("window=0x%x\n", t->win);
+    DBG("window=0x%lx\n", t->win);
     if (at == a_WM_STATE)    {
         DBG("event=WM_STATE\n");
         t->ws = get_wm_state (t->win);
@@ -581,8 +660,19 @@ pager_event_filter( XEvent *xev, GdkEvent *event, pager *pg)
     RET(GDK_FILTER_CONTINUE);
 }
 
-
-
+static void
+pager_bg_changed(FbBg *bg, pager *pg)
+{
+    int i;
+    
+    ENTER2;
+    for (i = 0; i < pg->desknum; i++) {
+        desk *d = pg->desks[i];
+        desk_draw_bg(pg, d);
+        desk_set_dirty(d);
+    }
+    RET2();
+}
 
 
 static void
@@ -636,20 +726,21 @@ pager_constructor(plugin *plug)
 
     pg->htable = g_hash_table_new (g_int_hash, g_int_equal);
 
-    pg->box = plug->panel->my_box_new(TRUE, 1);
+    pg->box = plug->panel->my_box_new(TRUE, 0);
     gtk_container_set_border_width (GTK_CONTAINER (pg->box), 0);
     gtk_widget_show(pg->box);
   
-    gtk_bgbox_set_background(plug->pwid, BG_STYLE, 0, 0);
-    gtk_container_set_border_width (GTK_CONTAINER (plug->pwid), 1);
+    //gtk_bgbox_set_background(plug->pwid, BG_STYLE, 0, 0);
+    gtk_container_set_border_width (GTK_CONTAINER (plug->pwid), 0);
     gtk_container_add(GTK_CONTAINER(plug->pwid), pg->box);
     pg->eb = pg->box;
 
     pg->ratio = (gfloat)gdk_screen_width() / (gfloat)gdk_screen_height();
-    pg->scaley = (gfloat)pg->dh / (gfloat)gdk_screen_height();
-    pg->scalex = (gfloat)pg->dw / (gfloat)gdk_screen_width();
+    //pg->scaley = (gfloat)pg->dh / (gfloat)gdk_screen_height();
+    //pg->scalex = (gfloat)pg->dw / (gfloat)gdk_screen_width();
 
-
+    pg->fbbg = fb_bg_get_for_display();
+    g_signal_connect(G_OBJECT(pg->fbbg), "changed", G_CALLBACK(pager_bg_changed), pg);
     pager_rebuild_all(fbev, pg);
     //do_net_current_desktop(fbev, pg);
     //do_net_client_list_stacking(fbev, pg);
@@ -684,6 +775,7 @@ pager_destructor(plugin *p)
     g_hash_table_foreach_remove(pg->htable, (GHRFunc) task_remove_all, (gpointer)pg);
     g_hash_table_destroy(pg->htable);
     gtk_widget_destroy(pg->eb);
+    g_object_unref(pg->fbbg);
     g_free(pg);
     RET();
 }
