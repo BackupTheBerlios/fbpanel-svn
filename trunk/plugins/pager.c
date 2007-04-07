@@ -470,10 +470,7 @@ desk_new(pager *pg, int i)
          (GCallback) desk_button_press_event, (gpointer)d);
     //g_signal_connect (G_OBJECT (d->da), "button_release_event",
     //     (GCallback) desk_button_release_event, (gpointer)d);
-    gtk_widget_show(d->da);
-    DBG("before pack\n");
-
-    DBG("after show\n");
+    gtk_widget_show_all(d->box);
     RET();
 }
 
@@ -488,7 +485,7 @@ desk_free(pager *pg, int i)
           i, d->no, d->da, d->pix);
     if (d->pix)
         g_object_unref(d->pix);
-    gtk_widget_destroy(d->da);
+    gtk_widget_destroy(d->box);
     g_free(d);
     RET();
 }
