@@ -68,7 +68,7 @@ struct _desk {
     GdkPixmap *pix;
     int no, dirty, first;
     gfloat scalew, scaleh;
-    pager *pg;
+    pager *pg; 
 };
 
 struct _pager {
@@ -84,6 +84,7 @@ struct _pager {
     GHashTable* htable;
     task *focusedtask;
     FbBg *fbbg;
+    gint dah, daw;
 };
 
 
@@ -382,7 +383,7 @@ desk_configure_event (GtkWidget *widget, GdkEventConfigure *event, desk *d)
     w = widget->allocation.width;
     h = widget->allocation.height;
     
-    DBG("d->no=%d %dx%d\n", d->no, w, h);
+    DBG("d->no=%d %dx%d %dx%d\n", d->no, w, h, d->pg->daw, d->pg->dah);
     if (d->pix)
         g_object_unref(d->pix);
     if (d->gpix)
@@ -395,16 +396,6 @@ desk_configure_event (GtkWidget *widget, GdkEventConfigure *event, desk *d)
     d->scalew = (gfloat)h / (gfloat)gdk_screen_height();
     d->scaleh = (gfloat)w / (gfloat)gdk_screen_width();
     desk_set_dirty(d);
-
-    //request best size
-    if (p->orientation != ORIENT_HORIZ) {
-        h = (gfloat) w / d->pg->ratio;
-    } else {
-        w = (gfloat) h * d->pg->ratio;
-    }
-    DBG("requesting %dx%d\n", w, h);
-    gtk_widget_set_size_request(widget, w, h);
-    
     RET(FALSE);
 }
 
@@ -464,6 +455,7 @@ desk_new(pager *pg, int i)
     d->no = i;
     
     d->da = gtk_drawing_area_new();
+    gtk_widget_set_size_request(d->da, pg->daw, pg->dah);
     gtk_box_pack_start(GTK_BOX(pg->box), d->da, TRUE, TRUE, 0);
     gtk_widget_add_events (d->da, GDK_EXPOSURE_MASK
           | GDK_BUTTON_PRESS_MASK
@@ -758,7 +750,7 @@ pager_rebuild_all(FbEv *ev, pager *pg)
     RET();
 }
 
-
+#define BORDER 1
 static int
 pager_constructor(plugin *plug)
 {
@@ -779,10 +771,18 @@ pager_constructor(plugin *plug)
        (GCallback) pager_expose_event, (gpointer)pg);
     */
     gtk_bgbox_set_background(plug->pwid, BG_STYLE, 0, 0);
-    gtk_container_set_border_width (GTK_CONTAINER (plug->pwid), 1);
+    gtk_container_set_border_width (GTK_CONTAINER (plug->pwid), BORDER);
     gtk_container_add(GTK_CONTAINER(plug->pwid), pg->box);
 
     pg->ratio = (gfloat)gdk_screen_width() / (gfloat)gdk_screen_height();
+    if (plug->panel->orientation == ORIENT_HORIZ) {
+        pg->dah = plug->panel->ah - 2 * BORDER;
+        pg->daw = (gfloat) pg->dah * pg->ratio;
+    } else {
+        pg->daw = plug->panel->aw - 2 * BORDER;
+        pg->dah = (gfloat) pg->daw / pg->ratio;
+    }
+    pg->wallpaper = 1;
     //pg->scaley = (gfloat)pg->dh / (gfloat)gdk_screen_height();
     //pg->scalex = (gfloat)pg->dw / (gfloat)gdk_screen_width();
     s.len = 256; 
