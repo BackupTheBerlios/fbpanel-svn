@@ -23,7 +23,7 @@ gchar *cprofile = "default";
 
 int config = 0;
 FbEv *fbev;
-
+gint force_quit = 0;
 //#define DEBUG
 #include "dbg.h"
 
@@ -220,7 +220,6 @@ static gint
 panel_size_alloc(GtkWidget *widget, GtkAllocation *a, panel *p)
 {
     ENTER;
-    DBG("installed alloc: size (%d, %d). pos (%d, %d)\n", aa->width, aa->height, aa->x, aa->y);
     DBG("suggested alloc: size (%d, %d). pos (%d, %d)\n", a->width, a->height, a->x, a->y);
     DBG("prev pref alloc: size (%d, %d). pos (%d, %d)\n", p->aw, p->ah, p->ax, p->ay);
     if (p->widthtype == WIDTH_REQUEST)
@@ -588,6 +587,7 @@ panel_parse_plugin(panel *p, FILE *fp)
     }
     DBG("plug %s\n", type);
     p->plugins = g_list_append(p->plugins, plug);
+    g_free(type);
     RET(1);
     
  error:
@@ -711,6 +711,10 @@ open_profile(gchar *profile)
 
     ENTER;
     LOG(LOG_INFO, "loading %s profile\n", profile);
+    if (cfgfile) {
+        g_free(cfgfile);
+        cfgfile = NULL;
+    }
     fname = g_strdup_printf("%s/.fbpanel/%s", getenv("HOME"), profile);
     fp = fopen(fname, "r");
     LOG(LOG_INFO, "   %s %s\n", fname, fp ? "ok" : "no");
@@ -760,7 +764,6 @@ int
 main(int argc, char *argv[], char *env[])
 {
     int i;
-    int quit = 0;
     void configure();
     FILE *pfp; /* current profile FP */
     
@@ -824,7 +827,7 @@ main(int argc, char *argv[], char *env[])
         gtk_main();
         panel_stop(p);
         g_free(p);
-    } while (quit == 0);
+    } while (force_quit == 0);
     
     exit(0);
 }

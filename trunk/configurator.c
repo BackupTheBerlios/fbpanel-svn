@@ -17,10 +17,12 @@
 
 void configure(void);
 void restart(void);
+void quit(void);
 
 command commands[] = {
     { "configure", configure },
     { "restart", restart },
+    { "quit", quit },
     { NULL, NULL },
 };
 
@@ -707,6 +709,17 @@ void
 restart(void)
 {
     ENTER;
+    gtk_main_quit();
+    RET();
+}
+
+
+void
+quit(void)
+{
+    ENTER;
+    gtk_main_quit();
+    force_quit = 1;
     RET();
 }
 

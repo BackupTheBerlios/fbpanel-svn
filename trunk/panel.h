@@ -145,7 +145,7 @@ extern Atom a_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR;
 
 
 extern int verbose;
-
+extern gint force_quit;
 extern FbEv *fbev;
 
 #define FBPANEL_WIN(win)  gdk_window_lookup(win)
