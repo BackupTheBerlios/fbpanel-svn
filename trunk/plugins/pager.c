@@ -62,7 +62,7 @@ typedef struct _pager  pager;
 #define MAX_DESK_NUM   20
 /* map of a desktop */
 struct _desk {
-    GtkWidget *da, *box;
+    GtkWidget *da;
     Pixmap xpix;
     GdkPixmap *gpix;
     GdkPixmap *pix;
@@ -72,10 +72,11 @@ struct _desk {
 };
 
 struct _pager {
-    GtkWidget *box, *eb;
+    GtkWidget *box;
     desk *desks[MAX_DESK_NUM];
     guint desknum;
     guint curdesk;
+    gint wallpaper;
     //int dw, dh;
     gfloat /*scalex, scaley, */ratio;
     Window *wins;
@@ -94,6 +95,9 @@ struct _pager {
    
 static void pager_rebuild_all(FbEv *ev, pager *pg);
 static void desk_draw_bg(pager *pg, desk *d1);
+//static void pager_paint_frame(pager *pg, gint no, GtkStateType state);
+
+static void pager_destructor(plugin *p);
 
 static inline void desk_set_dirty_by_win(pager *p, task *t);
 static inline void desk_set_dirty(desk *d);
@@ -219,7 +223,7 @@ desk_clear_pixmap(desk *d)
     if (!d->pix)
         RET();
     widget = GTK_WIDGET(d->da);
-    if (d->xpix != None) {
+    if (d->pg->wallpaper && d->xpix != None) {
     	gdk_draw_drawable (d->pix, 
               widget->style->dark_gc[GTK_STATE_NORMAL], 
               d->gpix, 
@@ -236,7 +240,13 @@ desk_clear_pixmap(desk *d)
               widget->allocation.width,
               widget->allocation.height);
     }
-    
+    if (d->pg->wallpaper && d->no == d->pg->curdesk)
+        gdk_draw_rectangle (d->pix,
+              widget->style->light_gc[GTK_STATE_SELECTED], 
+              FALSE, 
+              0, 0,
+              widget->allocation.width -1,
+              widget->allocation.height -1);
     RET();
 }
 
@@ -378,8 +388,10 @@ desk_configure_event (GtkWidget *widget, GdkEventConfigure *event, desk *d)
     if (d->gpix)
         g_object_unref(d->gpix);
     d->pix = gdk_pixmap_new(widget->window, w, h, -1);
-    d->gpix = gdk_pixmap_new(widget->window, w, h, -1);
-    desk_draw_bg(d->pg, d);
+    if (d->pg->wallpaper) {
+        d->gpix = gdk_pixmap_new(widget->window, w, h, -1);
+        desk_draw_bg(d->pg, d);
+    }
     d->scalew = (gfloat)h / (gfloat)gdk_screen_height();
     d->scaleh = (gfloat)w / (gfloat)gdk_screen_width();
     desk_set_dirty(d);
@@ -452,11 +464,7 @@ desk_new(pager *pg, int i)
     d->no = i;
     
     d->da = gtk_drawing_area_new();
-    d->box = gtk_hbox_new(FALSE, 0);
-    gtk_container_set_border_width (GTK_CONTAINER (d->box), 1);
-    gtk_box_pack_start(GTK_BOX(d->box), d->da, TRUE, TRUE, 0);
-    
-    gtk_box_pack_start(GTK_BOX(pg->box), d->box, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(pg->box), d->da, TRUE, TRUE, 0);
     gtk_widget_add_events (d->da, GDK_EXPOSURE_MASK
           | GDK_BUTTON_PRESS_MASK
           | GDK_BUTTON_RELEASE_MASK);
@@ -470,7 +478,7 @@ desk_new(pager *pg, int i)
          (GCallback) desk_button_press_event, (gpointer)d);
     //g_signal_connect (G_OBJECT (d->da), "button_release_event",
     //     (GCallback) desk_button_release_event, (gpointer)d);
-    gtk_widget_show_all(d->box);
+    gtk_widget_show_all(d->da);
     RET();
 }
 
@@ -485,7 +493,9 @@ desk_free(pager *pg, int i)
           i, d->no, d->da, d->pix);
     if (d->pix)
         g_object_unref(d->pix);
-    gtk_widget_destroy(d->box);
+    if (d->gpix)
+        g_object_unref(d->gpix);
+    gtk_widget_destroy(d->da);
     g_free(d);
     RET();
 }
@@ -524,16 +534,18 @@ do_net_active_window(FbEv *ev, pager *p)
 }
 
 static void
-do_net_current_desktop(FbEv *ev, pager *p)
+do_net_current_desktop(FbEv *ev, pager *pg)
 {
     ENTER;
-    desk_set_dirty(p->desks[p->curdesk]);
-    gtk_widget_set_state(p->desks[p->curdesk]->box, GTK_STATE_NORMAL);
-    p->curdesk =  get_net_current_desktop ();
-    if (p->curdesk >= p->desknum)
-        p->curdesk = 0;
-    desk_set_dirty(p->desks[p->curdesk]);
-    gtk_widget_set_state(p->desks[p->curdesk]->box, GTK_STATE_PRELIGHT);
+    desk_set_dirty(pg->desks[pg->curdesk]);
+    gtk_widget_set_state(pg->desks[pg->curdesk]->da, GTK_STATE_NORMAL);
+    //pager_paint_frame(pg, pg->curdesk, GTK_STATE_NORMAL);
+    pg->curdesk =  get_net_current_desktop ();
+    if (pg->curdesk >= pg->desknum)
+        pg->curdesk = 0;
+    desk_set_dirty(pg->desks[pg->curdesk]);
+    gtk_widget_set_state(pg->desks[pg->curdesk]->da, GTK_STATE_SELECTED);
+    //pager_paint_frame(pg, pg->curdesk, GTK_STATE_SELECTED);
     RET();
 }
 
@@ -656,19 +668,53 @@ pager_event_filter( XEvent *xev, GdkEvent *event, pager *pg)
         pager_configurenotify(pg, xev);
     RET(GDK_FILTER_CONTINUE);
 }
+#if 0
+static void
+pager_paint_frame(pager *pg, gint no, GtkStateType state)
+{
+    gint x, y, w, h, border;
+
+    ENTER;
+    RET();
+    //desk_set_dirty(pg->desks[no]);
+    border = gtk_container_get_border_width(GTK_CONTAINER(pg->box));
+    w = pg->box->allocation.width;
+    h = pg->desks[0]->da->allocation.height + border;
+    x = 0;
+    y = h * no;
+    h += border;
+    DBG("%d: %d %d %d %d\n", no, x, y, w, h);
+    gtk_paint_flat_box(pg->box->style, pg->box->window,
+          state, 
+          GTK_SHADOW_NONE,
+          NULL, pg->box, "box",
+          x + 1, y + 1,w, h);
+    RET();
+ 
+}
+
+static gint
+pager_expose_event (GtkWidget *widget, GdkEventExpose *event, pager *pg)
+{
+    ENTER;
+    DBG("curdesk=%d\n",  pg->curdesk);
+    pager_paint_frame(pg, pg->curdesk, GTK_STATE_SELECTED);
+    RET(TRUE);
+}
+#endif
 
 static void
 pager_bg_changed(FbBg *bg, pager *pg)
 {
     int i;
     
-    ENTER2;
+    ENTER;
     for (i = 0; i < pg->desknum; i++) {
         desk *d = pg->desks[i];
         desk_draw_bg(pg, d);
         desk_set_dirty(d);
     }
-    RET2();
+    RET();
 }
 
 
@@ -706,7 +752,9 @@ pager_rebuild_all(FbEv *ev, pager *pg)
         for (i = desknum; i < pg->desknum; i++) 
             desk_new(pg, i);
     }
+    do_net_current_desktop(NULL, pg);
     do_net_client_list_stacking(NULL, pg);
+ 
     RET();
 }
 
@@ -715,6 +763,7 @@ static int
 pager_constructor(plugin *plug)
 {
     pager *pg;
+    line s;
     
     ENTER;
     pg = g_new0(pager, 1);
@@ -722,25 +771,36 @@ pager_constructor(plugin *plug)
     plug->priv = pg;
 
     pg->htable = g_hash_table_new (g_int_hash, g_int_equal);
-
-    pg->box = plug->panel->my_box_new(TRUE, 0);
+    pg->box = plug->panel->my_box_new(TRUE, 1);
     gtk_container_set_border_width (GTK_CONTAINER (pg->box), 0);
     gtk_widget_show(pg->box);
-  
-    //gtk_bgbox_set_background(plug->pwid, BG_STYLE, 0, 0);
-    gtk_container_set_border_width (GTK_CONTAINER (plug->pwid), 0);
+    /*
+    g_signal_connect (G_OBJECT (pg->box), "expose_event",
+       (GCallback) pager_expose_event, (gpointer)pg);
+    */
+    gtk_bgbox_set_background(plug->pwid, BG_STYLE, 0, 0);
+    gtk_container_set_border_width (GTK_CONTAINER (plug->pwid), 1);
     gtk_container_add(GTK_CONTAINER(plug->pwid), pg->box);
-    pg->eb = pg->box;
 
     pg->ratio = (gfloat)gdk_screen_width() / (gfloat)gdk_screen_height();
     //pg->scaley = (gfloat)pg->dh / (gfloat)gdk_screen_height();
     //pg->scalex = (gfloat)pg->dw / (gfloat)gdk_screen_width();
-
-    pg->fbbg = fb_bg_get_for_display();
-    g_signal_connect(G_OBJECT(pg->fbbg), "changed", G_CALLBACK(pager_bg_changed), pg);
+    s.len = 256; 
+    while (get_line(plug->fp, &s) != LINE_BLOCK_END) {
+        if (s.type == LINE_VAR) {
+            if (!g_ascii_strcasecmp(s.t[0], "wallpaper")) {
+                pg->wallpaper = str2num(bool_pair, s.t[1], 1);
+                break;
+            }
+        }
+        ERR( "space: illegal in this context %s\n", s.str);
+        goto error;        
+    }
+    if (pg->wallpaper) {
+        pg->fbbg = fb_bg_get_for_display();
+        g_signal_connect(G_OBJECT(pg->fbbg), "changed", G_CALLBACK(pager_bg_changed), pg);
+    }
     pager_rebuild_all(fbev, pg);
-    //do_net_current_desktop(fbev, pg);
-    //do_net_client_list_stacking(fbev, pg);
     
     gdk_window_add_filter(NULL, (GdkFilterFunc)pager_event_filter, pg );
   
@@ -753,6 +813,10 @@ pager_constructor(plugin *plug)
     g_signal_connect (G_OBJECT (fbev), "client_list_stacking",
           G_CALLBACK (do_net_client_list_stacking), (gpointer) pg);
     RET(1);
+
+ error:
+    pager_destructor(plug);
+    RET(0);
 }
 
 static void
@@ -771,8 +835,12 @@ pager_destructor(plugin *p)
     }
     g_hash_table_foreach_remove(pg->htable, (GHRFunc) task_remove_all, (gpointer)pg);
     g_hash_table_destroy(pg->htable);
-    gtk_widget_destroy(pg->eb);
-    g_object_unref(pg->fbbg);
+    gtk_widget_destroy(pg->box);
+    if (pg->wallpaper) {
+        g_signal_handlers_disconnect_by_func(G_OBJECT (pg->fbbg),
+              pager_bg_changed, pg);  
+        g_object_unref(pg->fbbg);
+    }
     g_free(pg);
     RET();
 }
