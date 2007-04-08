@@ -149,7 +149,7 @@ do_app_dir(plugin *p, const gchar *path)
             //g_object_set_data_full(G_OBJECT(mi), "activate", exec, g_free);
             if (!(*menu))
                 *menu = gtk_menu_new();
-            gtk_menu_shell_append(GTK_MENU_SHELL(*menu), mi);
+            gtk_menu_shell_prepend(GTK_MENU_SHELL(*menu), mi);
             gtk_widget_show_all(mi);
             DBG("added =======================================\n");
         }
