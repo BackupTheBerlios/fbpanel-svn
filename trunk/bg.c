@@ -158,6 +158,8 @@ fb_bg_finalize (GObject *object)
     XFreeGC(bg->dpy, bg->gc);
     gdk_window_remove_filter(gdk_get_default_root_window (),
           (GdkFilterFunc)fb_bg_event_filter, bg);
+    default_bg = NULL;
+    
     RET();
 }
 

@@ -803,7 +803,7 @@ pager_constructor(plugin *plug)
     s.len = 256; 
     while (get_line(plug->fp, &s) != LINE_BLOCK_END) {
         if (s.type == LINE_VAR) {
-            if (!g_ascii_strcasecmp(s.t[0], "wallpaper")) {
+            if (!g_ascii_strcasecmp(s.t[0], "showwallpaper")) {
                 pg->wallpaper = str2num(bool_pair, s.t[1], 1);
                 break;
             }
@@ -813,6 +813,7 @@ pager_constructor(plugin *plug)
     }
     if (pg->wallpaper) {
         pg->fbbg = fb_bg_get_for_display();
+        DBG("get fbbg %p\n", pg->fbbg);
         g_signal_connect(G_OBJECT(pg->fbbg), "changed", G_CALLBACK(pager_bg_changed), pg);
     }
     pager_rebuild_all(fbev, pg);
@@ -853,7 +854,8 @@ pager_destructor(plugin *p)
     gtk_widget_destroy(pg->box);
     if (pg->wallpaper) {
         g_signal_handlers_disconnect_by_func(G_OBJECT (pg->fbbg),
-              pager_bg_changed, pg);  
+              pager_bg_changed, pg);
+        DBG("put fbbg %p\n", pg->fbbg);
         g_object_unref(pg->fbbg);
     }
     g_free(pg);
