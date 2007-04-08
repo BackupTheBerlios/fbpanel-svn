@@ -263,6 +263,21 @@ desk_draw_bg(pager *pg, desk *d1)
     GtkWidget *widget = d1->da;
     
     ENTER;
+    if (d1->no) {
+        desk *d0 = d1->pg->desks[0];
+        if (d0->gpix && d0->xpix != None
+              && d0->da->allocation.width == widget->allocation.width
+              && d0->da->allocation.height == widget->allocation.height) {
+            gdk_draw_drawable(d1->gpix,
+                  widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+                  d0->gpix,0, 0, 0, 0,
+                  widget->allocation.width, 
+                  widget->allocation.height);
+            d1->xpix = d0->xpix;
+            DBG("copy gpix from d0 to d%d\n", d1->no);
+            RET();
+        }
+    }
     xpix = fb_bg_get_xrootpmap(bg);
     d1->xpix = None;
     width = widget->allocation.width;
