@@ -38,7 +38,7 @@ static  gboolean
 clicked( GtkWidget *widget, gpointer dummy, dclock *dc)
 {
     ENTER2;
-    DBG2("%s\n", dc->action);
+    DBG("%s\n", dc->action);
     system (dc->action);
     RET2(TRUE);
 }

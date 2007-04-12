@@ -152,11 +152,6 @@ panel_event_filter(GdkXEvent *xevent, GdkEvent *event, panel *p)
         }else if (at == a_NET_CLIENT_LIST_STACKING) {
             DBG("A_NET_CLIENT_LIST_STACKING\n");
             fb_ev_trigger(fbev, EV_CLIENT_LIST_STACKING);
-        
-        /*} else if (at == a_XROOTPMAP_ID) {
-            DBG2("a_XROOTPMAP_ID\n");
-            //fb_bg_notify_changed_bg(p->bg);
-            */
 	} else if (at == a_NET_WORKAREA) {
             DBG("A_NET_WORKAREA\n");
             p->workarea = get_xaproperty (GDK_ROOT_WINDOW(), a_NET_WORKAREA, XA_CARDINAL, &p->wa_len);

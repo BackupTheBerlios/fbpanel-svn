@@ -134,11 +134,11 @@ fb_win_update_name(FbWin *win)
      
     win->name = get_utf8_property(win->xwin,  a_NET_WM_NAME);
     if (win->name)
-        DBG2("a_NET_WM_NAME=%s\n", win->name);
+        DBG("a_NET_WM_NAME=%s\n", win->name);
     if (!win->name) {
         win->name = get_textproperty(win->xwin,  XA_WM_NAME);
         if (win->name)
-            DBG2("XA_WM_NAME=%s\n", win->name);
+            DBG("XA_WM_NAME=%s\n", win->name);
     }
     RET();
 
