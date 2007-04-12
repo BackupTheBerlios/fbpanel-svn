@@ -180,7 +180,7 @@ read_button(plugin *p)
             else if (!g_ascii_strcasecmp(s.t[0], "icon"))
                 iname = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "action"))
-                action = g_strdup(s.t[1]);
+                action = expand_tilda(s.t[1]);
             else {
                 ERR( "launchbar: unknown var %s\n", s.t[0]);
                 goto error;

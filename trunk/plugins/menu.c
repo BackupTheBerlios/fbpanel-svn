@@ -317,7 +317,7 @@ read_item(plugin *p)
             else if (!g_ascii_strcasecmp(s.t[0], "icon"))
                 iname = g_strdup(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "action"))
-                action = g_strdup(s.t[1]);
+                action = expand_tilda(s.t[1]);
             else if (!g_ascii_strcasecmp(s.t[0], "command")) {
                 command *tmp;
                 
