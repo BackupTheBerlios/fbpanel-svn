@@ -529,13 +529,15 @@ menu_constructor(plugin *p)
     p->priv = m;
 
     //gtk_rc_parse_string(menu_rc);
+#if 0
     if  (p->panel->orientation == ORIENT_HORIZ) 
         m->paneliconsize = p->panel->ah
             - 2* GTK_WIDGET(p->panel->box)->style->ythickness;
     else
         m->paneliconsize = p->panel->aw
             - 2* GTK_WIDGET(p->panel->box)->style->xthickness;
-    m->iconsize = 22;       
+#endif
+    m->iconsize = 24;       
 
     m->box = gtk_hbox_new(FALSE, 0);
     gtk_container_set_border_width(GTK_CONTAINER(m->box), 0);
