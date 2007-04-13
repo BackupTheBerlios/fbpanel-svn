@@ -2,6 +2,8 @@
 * pager shows desktop wallpaper
 * expanding tilda (~) in action field in config files
 * menu icons size was set to 24 from 22 to avoid scaling
+* avoid re-moving panel to same position
+
 4.7
 New Feature
 * Build application menu from *.desktop files 
