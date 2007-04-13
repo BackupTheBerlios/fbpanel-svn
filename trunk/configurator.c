@@ -453,21 +453,19 @@ dialog_delete_event( GtkWidget *widget, GdkEvent  *event, gpointer   data )
 static GtkWidget *
 mk_tab_plugins()
 {
-    GtkWidget *sw, *paned, *hbox, *label;
-
-    paned = gtk_vpaned_new();
-
-    hbox = gtk_hbox_new(FALSE, 0);
-    label = gtk_label_new("Right-click to get context menu. Drag & Drop to change order.");
+    GtkWidget *hbox, *label;
+    gchar *msg;
+    
+    hbox = gtk_vbox_new(FALSE, 0);
+    msg = g_strdup_printf("Graphical plugin configuration is not implemented yet.\n"
+          "Please edit manually\n\t~/.fbpanel/%s\n\n"
+          "You can use as example\n\t%s/share/fbpanel/%s", cprofile, PREFIX, cprofile);
+    label = gtk_label_new(msg);
     gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
     gtk_box_pack_end(GTK_BOX(hbox), label, TRUE, TRUE, 5);
-
-    gtk_paned_add1(GTK_PANED(paned), hbox);
-
-    sw = gtk_label_new("Plugins...");
-    gtk_paned_add2(GTK_PANED(paned), sw);
+    g_free(msg);
     
-    RET(paned);
+    RET(hbox);
 }
 
 static GtkWidget *
