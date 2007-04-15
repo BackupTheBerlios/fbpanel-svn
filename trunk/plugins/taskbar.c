@@ -839,7 +839,7 @@ tk_build_gui(taskbar *tb, task *tk)
 
  
     /* pix and name */
-    w1 = tb->plug->panel->my_box_new(FALSE, 1);
+    w1 = gtk_hbox_new(FALSE, 1);
     gtk_container_set_border_width(GTK_CONTAINER(w1), 0);
 
     /* pix */
