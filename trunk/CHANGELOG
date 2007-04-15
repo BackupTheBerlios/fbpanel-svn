@@ -4,6 +4,8 @@
 * menu icons size was set to 24 from 22 to avoid scaling
 * avoid re-moving panel to same position
 * plugins section in configurator dialog suggests to edit config manually
+* taskbar vertical layout was fixed
+* taskbar 'icons only' mode was optimized
 
 4.7
 New Feature

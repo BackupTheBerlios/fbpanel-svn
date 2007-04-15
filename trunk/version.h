@@ -2,7 +2,7 @@
 #define _VERSION_H
 
 
-/* do not change this line - Makefile's 'tar' target depends on it */
+/* do not change format of this line - Makefile's 'tar' target depends on it */
 #define VERSION "4.8"
 
 
