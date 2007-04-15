@@ -818,8 +818,6 @@ tk_build_gui(taskbar *tb, task *tk)
         XSelectInput (GDK_DISPLAY(), tk->win, PropertyChangeMask | StructureNotifyMask);
 
     /* button */
-    //tk->eb = gtk_event_box_new();
-    //gtk_container_set_border_width(GTK_CONTAINER(tk->eb), 0);
     tk->button = gtk_button_new();
     gtk_widget_show(tk->button);
     gtk_container_set_border_width(GTK_CONTAINER(tk->button), 0);
@@ -830,10 +828,6 @@ tk_build_gui(taskbar *tb, task *tk)
           G_CALLBACK (tk_callback_leave), (gpointer) tk);    
     g_signal_connect_after (G_OBJECT (tk->button), "enter",
           G_CALLBACK (tk_callback_enter), (gpointer) tk);
-#if 0
-    g_signal_connect_after (G_OBJECT (tk->button), "expose-event",
-          G_CALLBACK (tk_callback_expose), (gpointer) tk);
-#endif
     gtk_drag_dest_set( tk->button, 0, NULL, 0, 0);
     g_signal_connect (G_OBJECT (tk->button), "drag-motion",
           G_CALLBACK (tk_callback_drag_motion), (gpointer) tk);
