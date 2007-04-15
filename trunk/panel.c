@@ -214,23 +214,23 @@ panel_size_req(GtkWidget *widget, GtkRequisition *req, panel *p)
 static gint
 panel_size_alloc(GtkWidget *widget, GtkAllocation *a, panel *p)
 {
-    gint x, y;
+    static gint x, y;
+    
     ENTER;
-    DBG("suggested alloc: size (%d, %d). pos (%d, %d)\n", a->width, a->height, a->x, a->y);
-    DBG("prev pref alloc: size (%d, %d). pos (%d, %d)\n", p->aw, p->ah, p->ax, p->ay);
+    DBG("gtk: size (%d, %d). pos (%d, %d)\n", a->width, a->height, a->x, a->y);
+    DBG("our: size (%d, %d). pos (%d, %d)\n", p->aw, p->ah, p->ax, p->ay);
     if (p->widthtype == WIDTH_REQUEST)
         p->width = (p->orientation == ORIENT_HORIZ) ? a->width : a->height;
     if (p->heighttype == HEIGHT_REQUEST)
         p->height = (p->orientation == ORIENT_HORIZ) ? a->height : a->width;
-    x = p->ax;
-    y = p->ay;
     calculate_position(p);
-    DBG("curr pref alloc: size (%d, %d). pos (%d, %d)\n", p->aw, p->ah, p->ax, p->ay);
+    DBG("our: size (%d, %d). pos (%d, %d)\n", p->aw, p->ah, p->ax, p->ay);
     if (a->width == p->aw && a->height == p->ah && x == p->ax && y == p ->ay) {
         DBG("actual coords eq to preffered. just returning\n");
         RET(TRUE);
     }
-
+    x = p->ax;
+    y = p->ay;
     gtk_window_move(GTK_WINDOW(p->topgwin), p->ax, p->ay);
     DBG("moving to %d %d\n", p->ax, p->ay);
     if (p->setstrut)

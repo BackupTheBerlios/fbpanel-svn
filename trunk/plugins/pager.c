@@ -808,7 +808,7 @@ pager_constructor(plugin *plug)
                 break;
             }
         }
-        ERR( "space: illegal in this context %s\n", s.str);
+        ERR( "pager: illegal in this context %s\n", s.str);
         goto error;        
     }
     if (pg->wallpaper) {
