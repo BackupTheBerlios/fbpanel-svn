@@ -459,9 +459,12 @@ mk_tab_plugins()
     hbox = gtk_vbox_new(FALSE, 0);
     msg = g_strdup_printf("Graphical plugin configuration is not implemented yet.\n"
           "Please edit manually\n\t~/.fbpanel/%s\n\n"
-          "You can use as example\n\t%s/share/fbpanel/%s", cprofile, PREFIX, cprofile);
+          "You can use as example files in \n\t%s/share/fbpanel/\n"
+          "or visit\n"
+          "\thttp://fbpanel.sourceforge.net/docs.html", cprofile, PREFIX);
     label = gtk_label_new(msg);
     gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(label), TRUE);
     gtk_box_pack_end(GTK_BOX(hbox), label, TRUE, TRUE, 5);
     g_free(msg);
     

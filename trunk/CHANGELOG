@@ -1,4 +1,5 @@
 4.8
+* help text in configurator was made selectable
 * pager shows desktop wallpaper
 * expanding tilda (~) in action field in config files
 * menu icons size was set to 24 from 22 to avoid scaling
