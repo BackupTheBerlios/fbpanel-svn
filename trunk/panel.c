@@ -764,7 +764,7 @@ main(int argc, char *argv[], char *env[])
     int i;
     void configure();
     FILE *pfp; /* current profile FP */
-    
+    GdkPixbuf* icon;
     ENTER;
     //printf("sizeof(gulong)=%d\n", sizeof(gulong));
     setlocale(LC_CTYPE, "");
@@ -772,6 +772,11 @@ main(int argc, char *argv[], char *env[])
     gtk_init(&argc, &argv);
     XSetLocaleModifiers("");
     XSetErrorHandler((XErrorHandler) handle_error);
+    icon = gdk_pixbuf_new_from_file(IMGPREFIX "star.png", NULL);
+    if (icon) {
+        gtk_window_set_default_icon(icon);
+        g_object_unref(icon);
+    }
     resolve_atoms();
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
